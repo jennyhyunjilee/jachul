@@ -222,7 +222,7 @@ details summary{cursor:pointer;color:var(--muted);font-size:13px}
 <dialog id="picker">
   <div class="sheet">
     <h2 id="pickerTitle">역 고르기</h2>
-    <input id="pickerSearch" type="search" placeholder="역 이름 검색 (예: 강남)" autocomplete="off">
+    <input id="pickerSearch" type="search" placeholder="역 이름이나 초성 (예: 강남, ㄱㄴ)" autocomplete="off">
     <ul class="list" id="pickerList"></ul>
     <button class="save" id="pickerClose" style="background:var(--chip);color:var(--ink)">닫기</button>
   </div>
@@ -498,10 +498,24 @@ function openPicker(which){
   $("pickerTitle").textContent = which === "from" ? "어디서 타?" : "어디서 내려?";
   $("pickerSearch").value = ""; renderPicker(); $("picker").showModal(); $("pickerSearch").focus();
 }
+// ---- 초성 검색: "ㄱㄴ" → 강남, "ㅎㄷㅇ" → 홍대입구, "강ㄴ"처럼 섞어도 됨 ----
+const CHO = "ㄱㄲㄴㄷㄸㄹㅁㅂㅃㅅㅆㅇㅈㅉㅊㅋㅌㅍㅎ";
+const choOf = ch => { const c = ch.charCodeAt(0) - 0xAC00; return c >= 0 && c < 11172 ? CHO[Math.floor(c/588)] : ch; };
+const charHit = (qc, nc) => qc === nc || (CHO.includes(qc) && choOf(nc) === qc);
+// 이름에서 검색어가 처음 맞는 위치 (없으면 -1). 앞에서 맞을수록 위로.
+function matchAt(name, q){
+  const n = [...name], qs = [...q];
+  for(let i = 0; i + qs.length <= n.length; i++) if(qs.every((qc, j) => charHit(qc, n[i+j]))) return i;
+  return -1;
+}
+function matchStation(name, q){
+  const at = [name, ...ALSO.get(name)].map(n => matchAt(n, q)).filter(i => i >= 0);
+  return at.length ? Math.min(...at) : -1;
+}
 function renderPicker(){
   const q = $("pickerSearch").value.trim().replace(/역$/,"");
   const all = [...BYNAME.keys()].sort((a,b)=>a.localeCompare(b,"ko"));
-  const hits = q ? all.filter(n => n.includes(q) || [...ALSO.get(n)].some(a => a.includes(q))).sort((a,b)=>(b.startsWith(q))-(a.startsWith(q))) : all;
+  const hits = q ? all.map(n => [n, matchStation(n, q)]).filter(x => x[1] >= 0).sort((a,b) => a[1] - b[1] || linesAt(b[0]).length - linesAt(a[0]).length).map(x => x[0]) : all;
   const recent = q ? [] : s.recent.filter(n => BYNAME.has(n));
   const item = n => `<li><button type="button" data-st="${n}">${n} ${badges(n)}</button></li>`;
   $("pickerList").innerHTML =
