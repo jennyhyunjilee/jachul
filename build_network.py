@@ -95,15 +95,23 @@ def crawl(key, budget):
             time.sleep(0.15)
         rows_all += rows
         for r in rows:
-            m = re.search(r"-\s*(.+?)방면", r.get("trainLineNm") or "")
-            if m:
-                queue.append(m.group(1).strip())
+            # 다음 역, 열차가 지금 있는 역, 종착역 → 운행 없는 방향의 역도 놓치지 않게
+            for n in (heading(r), r.get("arvlMsg3"), r.get("bstatnNm")):
+                if n and n not in seen:
+                    queue.append(n.strip())
     save_cache(cache)
     left = len([n for n in queue if n not in seen])
     print(f"역별 탐색: 이번에 {calls}번 호출, 저장된 역 {len(cache)}개")
     if stopped:
         print(f"  ⚠ {stopped}. 남은 역 약 {left}개 → 내일(또는 --budget 늘려서) 다시 실행하면 이어서 함")
     return rows_all, stopped
+
+
+def heading(r):
+    """'당고개행 - 2행 - 한성대입구방면 (급행)' → '한성대입구' (마지막 '-' 뒤, '방면' 앞)."""
+    tail = (r.get("trainLineNm") or "").split("-")[-1]
+    m = re.search(r"(.+?)방면", tail)
+    return m.group(1).strip() if m else None
 
 
 def save_cache(cache):
@@ -163,7 +171,7 @@ def main():
         rows, stopped = crawl(key, args.budget)
         batches, source = [rows], "서울시 지하철 실시간 도착정보(역별 탐색)"
 
-    nodes, edges = {}, set()
+    nodes, edges, hints = {}, set(), {}
     for rows in batches:
         for r in rows:
             line, sid = r.get("subwayId"), r.get("statnId")
@@ -173,6 +181,13 @@ def main():
             for nb in (r.get("statnFid"), r.get("statnTid")):
                 if valid_id(nb) and nb != sid and nb[:4] == line:
                     edges.add(tuple(sorted((sid, nb))))
+            # 다음 역 ID의 이름은 'OO방면'에 있음 → 열차가 안 오는 종착역도 이름을 붙임
+            h = heading(r)
+            if valid_id(r.get("statnTid")) and h and h != r["statnNm"]:
+                hints.setdefault(r["statnTid"], h)
+    for sid, name in hints.items():
+        if sid not in nodes:
+            nodes[sid] = {"n": name, "l": sid[:4]}
 
     unnamed = {x for e in edges for x in e} - nodes.keys()
     edges = sorted(e for e in edges if e[0] in nodes and e[1] in nodes)

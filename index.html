@@ -376,6 +376,8 @@ function modelNext(leg, t){
 function liveTrains(leg){
   if(!isLive() || !live || live.station !== leg.from) return [];
   const ride = meta(leg.l).ride, seen = new Set(), out = [];
+  // 종착역이 내릴 역보다 앞이면(예: 신도림행인데 교대까지 가야 함) 그 열차는 못 탐
+  const before = new Set([leg.from, ...leg.ids.slice(1, -1).map(nameOf)]);
   for(const r of live.rows){
     if(r.subwayId !== leg.l || r.statnTid !== leg.next || seen.has(r.btrainNo)) continue;
     seen.add(r.btrainNo);
@@ -386,12 +388,12 @@ function liveTrains(leg){
     if(sec > 0) m = sec/60;
     else if(cd === "0" || cd === "1") m = 0;
     else m = Math.max(1, away) * ride - (cd === "3" ? ride*0.3 : 0);
-    out.push({at: base + m*MIN, dest:r.bstatnNm, msg:r.arvlMsg2, express:r.btrainSttus && r.btrainSttus !== "일반", last:r.lstcarAt === "1"});
+    out.push({at: base + m*MIN, dest:r.bstatnNm, msg:r.arvlMsg2, express:r.btrainSttus && r.btrainSttus !== "일반", last:r.lstcarAt === "1", short: before.has(r.bstatnNm)});
   }
   return out.filter(x => x.at >= now() - 30000).sort((a,b) => a.at - b.at);
 }
 function nextTrain(leg, t, first){
-  const lv = first ? liveTrains(leg) : [];
+  const lv = first ? liveTrains(leg).filter(x => !x.short) : [];
   if(lv.length){
     const hit = lv.find(x => x.at >= t);
     if(hit) return hit.at;
@@ -643,14 +645,14 @@ function renderLive(p){
   let mineShown = false;
   const list = [], chars = [];
   for(const tr of trains.slice(0, 4)){
-    const mm = (tr.at - t)/MIN, k = mm / m.ride, mine = tr.at === leg.board, can = tr.at >= catchFrom;
+    const mm = (tr.at - t)/MIN, k = mm / m.ride, mine = !tr.short && tr.at === leg.board, can = !tr.short && tr.at >= catchFrom;
     if(mine) mineShown = k <= stations.length - 0.7;
     if(k <= stations.length - 0.7){
       const mood = mine ? "mine" : can ? "can" : "gone";
-      const bubble = mine ? "나 타!" : can ? `${Math.max(1, Math.ceil(mm))}분` : "바이~";
+      const bubble = mine ? "나 타!" : can ? `${Math.max(1, Math.ceil(mm))}분` : tr.short ? "거기 안 가" : "바이~";
       chars.push([mood, trainChar(xOf(Math.max(0, k)), y, m.c, mood, bubble)]);
     }
-    list.push(`<li class="${mine?"mine":can?"":"gone"}"><span class="eta">${mm < 0.5 ? "곧" : Math.ceil(mm)+"분"}</span><span>${hhmm(tr.at)}${tr.dest ? ` · ${tr.dest}행` : ""}${tr.express ? " · 급행" : ""}${tr.last ? " · 막차" : ""}${tr.msg ? ` · ${tr.msg}` : ""}${mine ? " ← 이거 타" : can ? "" : " (못 타)"}</span></li>`);
+    list.push(`<li class="${mine?"mine":can?"":"gone"}"><span class="eta">${mm < 0.5 ? "곧" : Math.ceil(mm)+"분"}</span><span>${hhmm(tr.at)}${tr.dest ? ` · ${tr.dest}행` : ""}${tr.express ? " · 급행" : ""}${tr.last ? " · 막차" : ""}${tr.msg ? ` · ${tr.msg}` : ""}${mine ? " ← 이거 타" : can ? "" : tr.short ? ` (${tr.dest}까지만 가. ${leg.to} 안 가)` : " (못 타)"}</span></li>`);
   }
   // 내 열차가 맨 위에 그려지게
   svg += chars.sort((a,b) => (a[0]==="mine") - (b[0]==="mine")).map(c => c[1]).join("");
