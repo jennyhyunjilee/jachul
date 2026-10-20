@@ -5,127 +5,148 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>잔소리역</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <style>
+/* 스티커 느낌: 굵은 테두리 + 딱딱한 그림자 + 형광 포인트 */
 :root{
-  --bg:#f6f5f1; --card:#ffffff; --ink:#1d1d1b; --muted:#6b6a66; --line:#e4e2dc;
-  --free:#d6e4d9; --prep:#e9b04a; --travel:#7d1d2c; --late:#c8423f; --ok:#2f8f5b;
-  --chip:#efeee9; --me:#1d1d1b; --meInk:#f6f5f1; --goal:#1d1d1b; --goalInk:#f6f5f1; --goalMuted:#b9b8b2;
+  --bg:#f3efe6; --card:#ffffff; --ink:#111111; --muted:#6e6a62; --line:#111111; --soft:#e6e0d3;
+  --free:#c8f560; --prep:#ff8ac2; --travel:#6c5ce7; --late:#ff4d2e; --ok:#14965f;
+  --chip:#ffffff; --me:#111111; --meInk:#f3efe6; --goal:#111111; --goalInk:#f3efe6; --goalMuted:#a19c90;
+  --accent:#c8f560; --accentInk:#111111; --shadow:#111111;
 }
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="light"]){
-    --bg:#141413; --card:#1f1f1d; --ink:#f1f0ea; --muted:#a3a29c; --line:#34332f;
-    --free:#2a3b2f; --prep:#d9a03a; --travel:#b5465a; --late:#ef6b66; --ok:#4cb37b;
-    --chip:#2a2a27; --me:#f1f0ea; --meInk:#141413; --goal:#2b2b28; --goalInk:#f1f0ea; --goalMuted:#a3a29c;
+    --bg:#0e0e0e; --card:#1a1a1a; --ink:#f3efe6; --muted:#a19c90; --line:#f3efe6; --soft:#2c2c2c;
+    --free:#b8f03f; --prep:#ff7ab8; --travel:#8c7cff; --late:#ff6a4d; --ok:#3ddc97;
+    --chip:#1a1a1a; --me:#f3efe6; --meInk:#0e0e0e; --goal:#1a1a1a; --goalInk:#f3efe6; --goalMuted:#a19c90;
+    --shadow:#c8f560;
   }
 }
 :root[data-theme="dark"]{
-  --bg:#141413; --card:#1f1f1d; --ink:#f1f0ea; --muted:#a3a29c; --line:#34332f;
-  --free:#2a3b2f; --prep:#d9a03a; --travel:#b5465a; --late:#ef6b66; --ok:#4cb37b;
-  --chip:#2a2a27; --me:#f1f0ea; --meInk:#141413; --goal:#2b2b28; --goalInk:#f1f0ea; --goalMuted:#a3a29c;
+  --bg:#0e0e0e; --card:#1a1a1a; --ink:#f3efe6; --muted:#a19c90; --line:#f3efe6; --soft:#2c2c2c;
+  --free:#b8f03f; --prep:#ff7ab8; --travel:#8c7cff; --late:#ff6a4d; --ok:#3ddc97;
+  --chip:#1a1a1a; --me:#f3efe6; --meInk:#0e0e0e; --goal:#1a1a1a; --goalInk:#f3efe6; --goalMuted:#a19c90;
+  --shadow:#c8f560;
 }
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--ink);font-family:"Noto Sans KR",system-ui,sans-serif;line-height:1.5}
-main{max-width:480px;margin:0 auto;padding:16px 16px 48px}
+.mono,.clock,.route .t,.trains .eta{font-family:"Space Mono",ui-monospace,monospace;font-variant-numeric:tabular-nums}
+main{max-width:480px;margin:0 auto;padding:18px 16px 56px}
 header{display:flex;align-items:center;gap:10px}
 .brand{flex:1;min-width:0}
-h1{font-size:19px;margin:0;font-weight:900;letter-spacing:-.02em}
-.tagline{font-size:12px;color:var(--muted);margin:0}
-.clock{color:var(--muted);font-variant-numeric:tabular-nums}
-.icon{border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:999px;width:40px;height:40px;font-size:18px;cursor:pointer;padding:0;flex:none}
-.source{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);margin:8px 0 12px}
+h1{font-size:26px;margin:0;font-weight:900;letter-spacing:-.05em;line-height:1.1;display:inline;background:linear-gradient(transparent 58%,var(--accent) 58%);color:var(--ink)}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]) h1{background:none;color:var(--accent)} }
+:root[data-theme="dark"] h1{background:none;color:var(--accent)}
+.tagline{font-size:12px;color:var(--muted);margin:4px 0 0}
+.clock{font-size:15px;font-weight:700}
+.icon{border:2px solid var(--line);background:var(--card);color:var(--ink);border-radius:12px;width:40px;height:40px;font-size:18px;cursor:pointer;padding:0;flex:none;box-shadow:3px 3px 0 var(--shadow)}
+.source{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);margin:10px 0 14px}
 .source i{width:8px;height:8px;border-radius:50%;background:var(--muted);display:inline-block}
-.source.live i{background:var(--ok);box-shadow:0 0 0 3px color-mix(in srgb,var(--ok) 25%,transparent)}
+.source.live i{background:var(--ok);animation:pulse 1.6s infinite}
 .source.err i{background:var(--late)}
-button{font:inherit;border:1px solid var(--line);background:var(--chip);color:var(--ink);border-radius:999px;padding:9px 14px;cursor:pointer}
+@keyframes pulse{50%{box-shadow:0 0 0 5px color-mix(in srgb,var(--ok) 25%,transparent)}}
+button{font:inherit;border:2px solid var(--line);background:var(--chip);color:var(--ink);border-radius:999px;padding:8px 14px;cursor:pointer;font-weight:700;box-shadow:2px 2px 0 var(--shadow);transition:transform .08s,box-shadow .08s}
+button:active{transform:translate(2px,2px);box-shadow:0 0 0 var(--shadow)}
 .hint{font-size:12.5px;color:var(--muted);margin:0}
-.lb{display:inline-flex;align-items:center;justify-content:center;min-width:20px;height:20px;padding:0 5px;border-radius:999px;color:#fff;font-size:11px;font-weight:700;vertical-align:1px;white-space:nowrap}
+.lb{display:inline-flex;align-items:center;justify-content:center;min-width:20px;height:20px;padding:0 5px;border-radius:999px;color:#fff;font-size:11px;font-weight:700;vertical-align:1px;white-space:nowrap;border:1.5px solid rgba(0,0,0,.25)}
 
 /* 목표 카드 */
-.goal{background:var(--goal);color:var(--goalInk);border-radius:24px;padding:18px;margin-bottom:16px}
-.goal-label{font-size:12px;color:var(--goalMuted);letter-spacing:.04em}
-.goal-head{font-size:24px;font-weight:900;margin:2px 0 14px;letter-spacing:-.02em}
+.goal{background:var(--goal);color:var(--goalInk);border-radius:24px;padding:18px;margin-bottom:18px;border:2px solid var(--line);box-shadow:5px 5px 0 var(--accent)}
+.goal-label{display:inline-block;font-size:11px;font-weight:700;letter-spacing:.08em;background:var(--accent);color:var(--accentInk);padding:2px 8px;border-radius:999px}
+.goal-head{font-size:26px;font-weight:900;margin:6px 0 14px;letter-spacing:-.04em;line-height:1.2}
 .goal-head .empty{color:var(--goalMuted)}
 .stations{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);gap:6px;align-items:stretch}
-.field{display:block;min-width:0;overflow:hidden;text-align:left;border-radius:16px;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.07);color:var(--goalInk);padding:10px 12px;width:100%;min-height:62px}
+.field{display:block;min-width:0;overflow:hidden;text-align:left;border-radius:16px;border:1.5px solid rgba(255,255,255,.18);background:rgba(255,255,255,.06);color:var(--goalInk);padding:10px 12px;width:100%;min-height:62px;box-shadow:none;font-weight:400}
 .field small{display:block;font-size:11.5px;color:var(--goalMuted)}
 .field .v{font-size:16px;font-weight:700;white-space:nowrap}
 .field .v.empty{color:var(--goalMuted);font-weight:500}
-.swap{align-self:center;background:transparent;color:var(--goalInk);border-color:rgba(255,255,255,.2);width:36px;height:36px;padding:0}
+.swap{align-self:center;background:var(--accent);color:var(--accentInk);border-color:var(--accent);width:36px;height:36px;padding:0;box-shadow:none}
 .goal-row{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px}
-.field input[type=time]{font:inherit;font-size:16px;font-weight:700;background:transparent;border:none;color:var(--goalInk);padding:0;width:100%;color-scheme:dark}
+.field input[type=time]{font:inherit;font-family:"Space Mono",monospace;font-size:16px;font-weight:700;background:transparent;border:none;color:var(--goalInk);padding:0;width:100%;color-scheme:dark}
 .stepper{display:flex;align-items:center;gap:6px}
-.stepper button{background:transparent;color:var(--goalInk);border-color:rgba(255,255,255,.2);width:30px;height:30px;padding:0;line-height:1;flex:none}
+.stepper button{background:transparent;color:var(--goalInk);border:1.5px solid rgba(255,255,255,.3);width:30px;height:30px;padding:0;line-height:1;flex:none;box-shadow:none}
 .stepper .v{flex:1;text-align:center}
 .goal-sum{margin:12px 0 0;font-size:13px;color:var(--goalMuted)}
 
 /* 에이전트 */
-.feed{display:flex;flex-direction:column;gap:10px;margin-bottom:12px}
-.msg{max-width:90%;padding:12px 14px;border-radius:18px;font-size:15.5px;animation:pop .25s ease-out}
-.msg.agent{background:var(--card);border:1px solid var(--line);border-top-left-radius:6px;align-self:flex-start;border-left:4px solid var(--free)}
-.msg.agent.warn{border-left-color:var(--prep)}
-.msg.agent.urgent{border-left-color:var(--travel)}
-.msg.agent.late{border-left-color:var(--late)}
-.msg.me{background:var(--me);color:var(--meInk);align-self:flex-end;border-top-right-radius:6px;font-size:14.5px}
-.msg b{display:block;font-size:18px;margin-bottom:2px}
-.msg .time{display:block;font-size:11px;color:var(--muted);margin-top:4px}
-@keyframes pop{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
-.ask{width:100%;padding:17px;font-size:18px;font-weight:700;background:var(--ink);color:var(--bg);border:none;border-radius:18px}
-.chips{display:flex;gap:8px;margin:10px 0 18px;flex-wrap:wrap}
+.feed{display:flex;flex-direction:column;gap:10px;margin-bottom:14px}
+.msg{max-width:90%;padding:12px 14px;border-radius:18px;font-size:15.5px;animation:pop .25s ease-out;border:2px solid var(--line)}
+.msg.agent{background:var(--card);border-top-left-radius:6px;align-self:flex-start;box-shadow:4px 4px 0 var(--free)}
+.msg.agent.warn{box-shadow:4px 4px 0 var(--prep)}
+.msg.agent.urgent{box-shadow:4px 4px 0 var(--travel)}
+.msg.agent.late{box-shadow:4px 4px 0 var(--late)}
+.msg.me{background:var(--me);color:var(--meInk);align-self:flex-end;border-top-right-radius:6px;font-size:14.5px;font-weight:700}
+.msg b{display:block;font-size:19px;font-weight:900;letter-spacing:-.02em;margin-bottom:2px}
+.msg .time{display:block;font-size:11px;color:var(--muted);margin-top:4px;font-family:"Space Mono",monospace}
+@keyframes pop{from{opacity:0;transform:translateY(6px) rotate(-1deg)}to{opacity:1;transform:none}}
+.ask{width:100%;padding:16px;font-size:19px;font-weight:900;letter-spacing:-.02em;background:var(--accent);color:var(--accentInk);border:2px solid var(--line);border-radius:18px;box-shadow:5px 5px 0 var(--shadow)}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]) .ask{box-shadow:5px 5px 0 var(--prep)} }
+:root[data-theme="dark"] .ask{box-shadow:5px 5px 0 var(--prep)}
+.ask:active{transform:translate(4px,4px);box-shadow:1px 1px 0 var(--shadow)}
+.chips{display:flex;gap:8px;margin:14px 0 22px;flex-wrap:wrap}
 
-.card{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:18px;margin-bottom:14px}
-.card h2{font-size:15px;margin:0 0 2px}
+.card{background:var(--card);border:2px solid var(--line);border-radius:22px;padding:18px;margin-bottom:18px;box-shadow:5px 5px 0 var(--shadow)}
+.card h2{font-size:17px;font-weight:900;letter-spacing:-.03em;margin:0 0 2px}
 body:not(.ready) .needgoal{display:none !important}
 
 /* 다이얼 */
 .dialwrap{display:flex;flex-direction:column;align-items:center}
 .dialwrap h2,.dialwrap .hint{align-self:flex-start}
 svg.dial{width:100%;max-width:280px;touch-action:none;cursor:grab;user-select:none;margin-top:6px}
-.center-big{font-size:19px;font-weight:700;fill:var(--ink)}
+.center-big{font-size:19px;font-weight:900;fill:var(--ink)}
 .center-sm{font-size:12px;fill:var(--muted)}
 .center-res{font-size:14px;font-weight:700}
 input[type=range]{width:100%;accent-color:var(--travel)}
-.legend{display:flex;gap:14px;font-size:12px;color:var(--muted);margin-top:4px}
-.legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+.legend{display:flex;gap:14px;font-size:12px;color:var(--muted);margin-top:6px}
+.legend i{display:inline-block;width:12px;height:12px;border-radius:4px;margin-right:5px;vertical-align:-2px;border:1.5px solid var(--line)}
 
 /* 경로 */
 .route{list-style:none;margin:12px 0 0;padding:0}
-.route li{display:grid;grid-template-columns:48px 18px 1fr;gap:0 10px;align-items:start;min-height:44px}
-.route .t{font-variant-numeric:tabular-nums;font-weight:700;font-size:14px;padding-top:1px}
+.route li{display:grid;grid-template-columns:50px 18px 1fr;gap:0 10px;align-items:start;min-height:44px}
+.route .t{font-weight:700;font-size:13.5px;padding-top:1px}
 .route .rail{position:relative;height:100%;display:flex;justify-content:center}
-.route .rail::before{content:"";position:absolute;top:0;bottom:0;width:4px;border-radius:2px;background:var(--seg,var(--line))}
+.route .rail::before{content:"";position:absolute;top:0;bottom:0;width:5px;border-radius:3px;background:var(--seg,var(--soft))}
 .route li:last-child .rail::before{display:none}
-.route .dot{position:relative;width:14px;height:14px;border-radius:50%;background:var(--card);border:3px solid var(--dotc,var(--ink));margin-top:4px}
+.route .dot{position:relative;width:15px;height:15px;border-radius:50%;background:var(--card);border:3px solid var(--dotc,var(--ink));margin-top:4px}
 .route .what{font-size:14.5px;padding-bottom:12px}
 .route .what small{display:block;color:var(--muted);font-size:12.5px}
-.route .xfer .what{color:var(--late);font-weight:700}
-.route .verdict{font-weight:700}
+.route .xfer .what{font-weight:700}
+.route .xfer .what > :first-child,.route .xfer .what{color:var(--ink)}
+.route .xfer .what{background:color-mix(in srgb,var(--prep) 30%,transparent);border-radius:10px;padding:4px 8px;margin:-4px 0 8px -8px}
+.route .verdict{font-weight:900}
 
 /* 실시간 열차 */
-svg.strip{width:100%;height:auto;display:block;margin-top:10px}
-.trains{list-style:none;margin:8px 0 0;padding:0;font-size:13.5px}
-.trains li{display:flex;gap:8px;padding:6px 0;border-top:1px solid var(--line);font-variant-numeric:tabular-nums}
-.trains li:first-child{border-top:none}
-.trains .eta{font-weight:700;min-width:44px}
-.trains .mine{color:var(--travel);font-weight:700}
-.trains .gone{color:var(--muted)}
+svg.strip{width:100%;height:auto;display:block;margin-top:6px;overflow:visible}
+.bob{animation:bob .8s ease-in-out infinite;transform-box:fill-box;transform-origin:center bottom}
+.bob.mine{animation-duration:.5s}
+.blink{animation:blink 3.4s infinite;transform-box:fill-box;transform-origin:center}
+.wiggle{animation:wiggle 1.2s ease-in-out infinite;transform-box:fill-box;transform-origin:center bottom}
+@keyframes bob{50%{transform:translateY(-2.5px)}}
+@keyframes blink{0%,93%,100%{transform:scaleY(1)}96%{transform:scaleY(.1)}}
+@keyframes wiggle{0%,100%{transform:rotate(-4deg)}50%{transform:rotate(4deg)}}
+@media (prefers-reduced-motion: reduce){ .bob,.blink,.wiggle,.source.live i{animation:none} }
+.trains{list-style:none;margin:10px 0 0;padding:0;font-size:13.5px}
+.trains li{display:flex;gap:10px;align-items:baseline;padding:7px 8px;border-radius:10px}
+.trains .eta{font-weight:700;min-width:46px}
+.trains .mine{background:var(--accent);color:var(--accentInk);font-weight:700}
+.trains .gone{color:var(--muted);text-decoration:line-through;text-decoration-thickness:1px}
 
 /* 시트 */
-dialog{border:none;border-radius:22px;padding:0;width:min(440px,calc(100% - 24px));max-height:86vh;background:var(--card);color:var(--ink)}
-dialog::backdrop{background:rgba(0,0,0,.45)}
+dialog{border:2px solid var(--line);border-radius:22px;padding:0;width:min(440px,calc(100% - 24px));max-height:86vh;background:var(--card);color:var(--ink);box-shadow:6px 6px 0 var(--shadow)}
+dialog::backdrop{background:rgba(0,0,0,.5)}
 .sheet{padding:18px}
-.sheet h2{margin:0 0 4px;font-size:18px}
+.sheet h2{margin:0 0 4px;font-size:20px;font-weight:900;letter-spacing:-.03em}
 .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:14px}
 label{display:block;font-size:12.5px;color:var(--muted);margin-bottom:4px}
-.sheet input,.sheet select{font:inherit;width:100%;padding:10px 12px;border-radius:12px;border:1px solid var(--line);background:var(--bg);color:var(--ink)}
+.sheet input,.sheet select{font:inherit;width:100%;padding:10px 12px;border-radius:12px;border:2px solid var(--line);background:var(--bg);color:var(--ink)}
 .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:14px}
-.pill{font-size:12px;padding:4px 10px;border-radius:999px;background:var(--chip);color:var(--muted)}
+.pill{font-size:12px;padding:4px 10px;border-radius:999px;background:var(--soft);color:var(--muted)}
 .pill.on{background:var(--ok);color:#fff}
-.save{width:100%;margin-top:16px;padding:14px;background:var(--ink);color:var(--bg);border:none;border-radius:14px;font-weight:700}
+.save{width:100%;margin-top:16px;padding:14px;background:var(--accent);color:var(--accentInk);border-radius:14px;font-weight:900}
 details{margin-top:14px}
 details summary{cursor:pointer;color:var(--muted);font-size:13px}
 .list{list-style:none;margin:10px 0 0;padding:0;max-height:52vh;overflow:auto}
-.list button{width:100%;text-align:left;border:none;border-bottom:1px solid var(--line);border-radius:0;background:transparent;padding:12px 4px;display:flex;align-items:center;gap:6px;font-size:16px;flex-wrap:wrap}
+.list button{width:100%;text-align:left;border:none;border-bottom:1.5px solid var(--soft);border-radius:0;background:transparent;padding:12px 4px;display:flex;align-items:center;gap:6px;font-size:16px;flex-wrap:wrap;box-shadow:none}
 .list .sec{font-size:12px;color:var(--muted);padding:10px 4px 4px}
 </style>
 </head>
@@ -192,7 +213,7 @@ details summary{cursor:pointer;color:var(--muted);font-size:13px}
   <section class="card needgoal">
     <h2 id="liveTitle">지금 오는 열차</h2>
     <p class="hint" id="liveHint"></p>
-    <svg class="strip" id="strip" viewBox="0 0 340 122" role="img" aria-label="다가오는 열차 위치"></svg>
+    <svg class="strip" id="strip" viewBox="0 0 340 180" role="img" aria-label="다가오는 열차 위치"></svg>
     <ul class="trains" id="trains"></ul>
   </section>
 </main>
@@ -516,12 +537,12 @@ function drawDial(p){
     return `<text x="${x}" y="${y+4}" text-anchor="middle" class="center-sm">${f ? "+"+Math.round(W*f)+"분" : "지금"}</text>`;
   }).join("");
   $("dial").innerHTML = `
-    <circle cx="${CX}" cy="${CY}" r="${R}" fill="none" stroke="var(--line)" stroke-width="18"/>
+    <circle cx="${CX}" cy="${CY}" r="${R}" fill="none" stroke="var(--soft)" stroke-width="18"/>
     <path d="${arc(0, deg(p.prepStart))}" stroke="var(--free)" stroke-width="18" fill="none"/>
     <path d="${arc(deg(p.prepStart), deg(p.leave))}" stroke="var(--prep)" stroke-width="18" fill="none"/>
     <path d="${arc(deg(p.leave), deg(p.target))}" stroke="var(--travel)" stroke-width="18" fill="none"/>
     ${ticks}
-    <circle cx="${kx}" cy="${ky}" r="14" fill="var(--card)" stroke="var(--ink)" stroke-width="3"/>
+    <circle cx="${kx}" cy="${ky}" r="14" fill="var(--accent)" stroke="var(--ink)" stroke-width="3"/>
     <text x="${CX}" y="${CY-20}" text-anchor="middle" class="center-big">${selOffset===0?"지금 나가면":selOffset+"분 뒤에 나가면"}</text>
     <text x="${CX}" y="${CY+4}" text-anchor="middle" class="center-sm">${hhmm(r.legs[0].board)} 열차 · ${hhmm(r.arrive)} 도착</text>
     <text x="${CX}" y="${CY+30}" text-anchor="middle" class="center-res" fill="${color}">${res}</text>`;
@@ -545,12 +566,12 @@ function renderRoute(p){
     `<li class="${cls}"><span class="t">${t}</span><span class="rail" style="--seg:${seg};--dotc:${dotc}"><span class="dot"></span></span><span class="what">${what}${sub?`<small>${sub}</small>`:""}</span></li>`;
   const rows = [];
   if(!past) rows.push(li(hhmm(p.prepStart), "준비 시작", `${s.prep}분`, "var(--prep)", "var(--prep)"));
-  rows.push(li(hhmm(sim.leave), past ? "지금 나가면" : "집에서 나가기", `${sim.legs[0].from}역까지 걸어서 ${s.walkTo}분`, "var(--ink)", "var(--line)"));
+  rows.push(li(hhmm(sim.leave), past ? "지금 나가면" : "집에서 나가기", `${sim.legs[0].from}역까지 걸어서 ${s.walkTo}분`, "var(--ink)", "var(--soft)"));
   sim.legs.forEach((l, k) => {
     const c = meta(l.l).c;
-    if(k > 0) rows.push(li(hhmm(l.readyAt), `${l.from}에서 ${meta(l.l).name}으로 갈아타기`, `걷는 데 ${XFER_WALK}분 + 기다리는 데 ${mins(l.board - l.readyAt)}분`, "var(--late)", "var(--line)", "xfer"));
+    if(k > 0) rows.push(li(hhmm(l.readyAt), `${l.from}에서 ${meta(l.l).name}으로 갈아타기`, `걷는 데 ${XFER_WALK}분 + 기다리는 데 ${mins(l.board - l.readyAt)}분`, "var(--late)", "var(--soft)", "xfer"));
     rows.push(li(hhmm(l.board), `${l.from} ${badge(l.l)} 탑승`, `${l.toward} · ${l.stops}정거장 · 약 ${legRide(l)}분`, c, c));
-    rows.push(li(hhmm(l.alight), `${l.to} 하차`, "", c, "var(--line)"));
+    rows.push(li(hhmm(l.alight), `${l.to} 하차`, "", c, "var(--soft)"));
   });
   const color = sl >= 0 ? "var(--ok)" : "var(--late)";
   rows.push(li(hhmm(sim.arrive), `<span class="verdict" style="color:${color}">${s.to} 도착 · ${sl >= 0 ? sl+"분 여유" : -sl+"분 지각"}</span>`, `목표 ${s.arrive} · 도보 ${s.walkFrom}분 포함`, color, "transparent"));
@@ -570,36 +591,72 @@ function upstream(leg, n){
   }
   return out;
 }
+// 열차 캐릭터: 노선색 몸통 + 창문 얼굴. mood = mine | can | gone
+function trainChar(x, y, color, mood, bubble){
+  const sc = mood === "mine" ? 1.15 : 1;
+  const eyes = mood === "gone"
+    ? `<path d="M-8 -3h5M3 -3h5" stroke="#111" stroke-width="2" stroke-linecap="round"/>`
+    : `<g class="blink"><circle cx="-5" cy="-3" r="2.2" fill="#111"/><circle cx="5" cy="-3" r="2.2" fill="#111"/></g>`;
+  const mouth = mood === "gone" ? `<path d="M-2.5 6h5" stroke="#111" stroke-width="1.8" stroke-linecap="round"/>`
+    : `<path d="M-3.5 5Q0 ${mood === "mine" ? 9.5 : 8} 3.5 5" stroke="#111" stroke-width="1.8" fill="none" stroke-linecap="round"/>`;
+  const bw = [...bubble].length*10.5 + 16;
+  const bfill = mood === "mine" ? "var(--accent)" : mood === "can" ? "var(--card)" : "var(--soft)";
+  return `<g transform="translate(${x} ${y-15}) scale(${sc})" opacity="${mood === "gone" ? .5 : 1}">
+    <g class="bob${mood === "mine" ? " mine" : ""}">
+      <g class="${mood === "mine" ? "wiggle" : ""}">
+        <rect x="${-bw/2}" y="-47" width="${bw}" height="21" rx="10.5" fill="${bfill}" stroke="var(--line)" stroke-width="1.8"/>
+        <path d="M-5 -26.5 L0 -20 L5 -26.5" fill="${bfill}" stroke="var(--line)" stroke-width="1.8" stroke-linejoin="round"/>
+        <rect x="-4.2" y="-28.5" width="8.4" height="3" fill="${bfill}"/>
+        <text x="0" y="-32.5" text-anchor="middle" font-size="11.5" font-weight="900" fill="${mood === "mine" ? "#111" : "var(--ink)"}">${bubble}</text>
+      </g>
+      <rect x="-19" y="-13" width="38" height="24" rx="10" fill="${color}" stroke="var(--line)" stroke-width="2"/>
+      <rect x="-13" y="-8.5" width="26" height="10" rx="5" fill="#fff" stroke="#111" stroke-width="1.5"/>
+      ${eyes}
+      <ellipse cx="-14" cy="4" rx="3" ry="2" fill="#ff8ac2"/><ellipse cx="14" cy="4" rx="3" ry="2" fill="#ff8ac2"/>
+      ${mouth}
+      <circle cx="-10" cy="12" r="3.6" fill="#111"/><circle cx="10" cy="12" r="3.6" fill="#111"/>
+    </g>
+  </g>`;
+}
 function renderLive(p){
   const t = now(), past = t > p.leave;
   const leg = (past ? simulate(t) : p.sim).legs[0], m = meta(leg.l);
   const up = upstream(leg, 6), stations = [leg.ids[0], ...up];
-  const x1 = 300, gap = (x1 - 24)/6, xOf = k => x1 - k*gap, y = 56;
-  let svg = `<line x1="${xOf(stations.length-1)}" y1="${y}" x2="${x1+20}" y2="${y}" stroke="${m.c}" stroke-width="6" stroke-linecap="round"/>`;
-  svg += `<text x="${x1+26}" y="${y+4}" font-size="16" fill="${m.c}">›</text>`;
+  const x1 = 296, gap = (x1 - 28)/6, xOf = k => x1 - k*gap, y = 96;
+  let svg = `<line x1="${xOf(stations.length-1)-10}" y1="${y}" x2="${x1+26}" y2="${y}" stroke="${m.c}" stroke-width="9" stroke-linecap="round"/>`;
+  svg += `<line x1="${xOf(stations.length-1)-10}" y1="${y}" x2="${x1+26}" y2="${y}" stroke="#fff" stroke-opacity=".55" stroke-width="2" stroke-dasharray="2 9"/>`;
   stations.forEach((id, k) => {
-    const me = k === 0, n = nameOf(id);
-    svg += `<circle cx="${xOf(k)}" cy="${y}" r="${me?8:5}" fill="var(--card)" stroke="${m.c}" stroke-width="3"/>`;
-    svg += `<text x="${xOf(k)}" y="${y+28}" text-anchor="middle" font-size="${me?12:10}" font-weight="${me?700:400}" fill="${me?"var(--ink)":"var(--muted)"}">${n.length>5?n.slice(0,4)+"…":n}</text>`;
+    const n = nameOf(id), x = xOf(k);
+    if(k === 0){
+      svg += `<circle cx="${x}" cy="${y}" r="9" fill="var(--accent)" stroke="var(--line)" stroke-width="2.5"/>`;
+      const short = n.length>5 ? n.slice(0,4)+"…" : n, w = ([...short].length + 3)*12 + 16;
+      svg += `<g transform="rotate(-4 ${x} ${y+42})"><rect x="${Math.min(x - w/2, 336 - w)}" y="${y+30}" width="${w}" height="24" rx="8" fill="var(--accent)" stroke="var(--line)" stroke-width="2"/>`;
+      svg += `<text x="${Math.min(x, 336 - w/2)}" y="${y+46.5}" text-anchor="middle" font-size="12" font-weight="900" fill="#111">여기! ${short}</text></g>`;
+    } else {
+      svg += `<circle cx="${x}" cy="${y}" r="5.5" fill="var(--card)" stroke="var(--line)" stroke-width="2"/>`;
+      svg += `<text x="${x}" y="${y+22}" text-anchor="middle" font-size="10" fill="var(--muted)">${n.length>5?n.slice(0,4)+"…":n}</text>`;
+    }
   });
   const lv = liveTrains(leg);
   const trains = lv.length ? lv : [0,1,2,3].map(j => ({at: modelNext(leg, t) + j*m.h*MIN}));
   const catchFrom = Math.max(t, p.leave) + s.walkTo*MIN;
   let mineShown = false;
-  const list = [];
+  const list = [], chars = [];
   for(const tr of trains.slice(0, 4)){
     const mm = (tr.at - t)/MIN, k = mm / m.ride, mine = tr.at === leg.board, can = tr.at >= catchFrom;
     if(mine) mineShown = k <= stations.length - 0.7;
     if(k <= stations.length - 0.7){
-      const x = xOf(Math.max(0, k)), fill = mine ? m.c : can ? "var(--ink)" : "var(--muted)";
-      svg += `<rect x="${x-13}" y="${y-9}" width="26" height="18" rx="6" fill="${fill}" opacity="${can||mine?1:.45}"/>`;
-      svg += `<text x="${x}" y="${y-16}" text-anchor="middle" font-size="11" font-weight="700" fill="${mine?m.c:"var(--muted)"}">${mine ? "이거 타" : can ? Math.ceil(mm)+"분" : "못 타"}</text>`;
+      const mood = mine ? "mine" : can ? "can" : "gone";
+      const bubble = mine ? "나 타!" : can ? `${Math.max(1, Math.ceil(mm))}분` : "바이~";
+      chars.push([mood, trainChar(xOf(Math.max(0, k)), y, m.c, mood, bubble)]);
     }
     list.push(`<li class="${mine?"mine":can?"":"gone"}"><span class="eta">${mm < 0.5 ? "곧" : Math.ceil(mm)+"분"}</span><span>${hhmm(tr.at)}${tr.dest ? ` · ${tr.dest}행` : ""}${tr.express ? " · 급행" : ""}${tr.last ? " · 막차" : ""}${tr.msg ? ` · ${tr.msg}` : ""}${mine ? " ← 이거 타" : can ? "" : " (못 타)"}</span></li>`);
   }
+  // 내 열차가 맨 위에 그려지게
+  svg += chars.sort((a,b) => (a[0]==="mine") - (b[0]==="mine")).map(c => c[1]).join("");
   const myWait = Math.ceil((leg.board - t)/MIN);
-  svg += `<text x="12" y="112" font-size="12.5" fill="var(--ink)" font-weight="700">${mineShown
-    ? "\"이거 타\" 열차가 네 거야. 놓치지 마."
+  svg += `<text x="4" y="172" font-size="12.5" fill="var(--ink)" font-weight="700">${mineShown
+    ? "\"나 타!\" 하는 애가 네 열차야. 놓치지 마."
     : `네 열차는 ${hhmm(leg.board)} (${myWait}분 뒤). 아직 저 멀리 있어.`}</text>`;
   $("strip").innerHTML = svg;
   $("trains").innerHTML = list.join("");
