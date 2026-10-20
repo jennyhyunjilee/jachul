@@ -92,7 +92,7 @@ body:not(.ready) .needgoal{display:none !important}
 /* 다이얼 */
 .dialwrap{display:flex;flex-direction:column;align-items:center}
 .dialwrap h2,.dialwrap .hint{align-self:flex-start}
-svg.dial{width:100%;max-width:280px;touch-action:none;cursor:grab;user-select:none;margin-top:6px}
+svg.dial{width:100%;max-width:280px;overflow:visible;touch-action:none;cursor:grab;user-select:none;margin-top:6px}
 .center-big{font-size:19px;font-weight:900;fill:var(--ink)}
 .center-sm{font-size:12px;fill:var(--muted)}
 .center-res{font-size:14px;font-weight:700}
@@ -451,7 +451,7 @@ function judge(p, t){
 }
 function whatIf(off){
   const p = plan(), r = simulate(now() + off*MIN), sl = slackOf(r, p.target);
-  const when = off === 0 ? "지금 나가면" : `${off}분 뒤에 나가면`;
+  const when = off === 0 ? "지금 나가면" : `${dur(off)} 뒤에 나가면`;
   const title = sl >= 5 ? `${dur(sl)} 남아. 괜찮아.` : sl > 0 ? `${sl}분 남아. 빠듯해.` : sl === 0 ? "딱 맞춰 도착. 여유 없어." : `${dur(-sl)} 지각. 그러지 마.`;
   return {level: sl >= 5 ? "" : sl >= 0 ? "warn" : "late", title, body:`${when} ${r.legs[0].from} ${hhmm(r.legs[0].board)} 열차 타고 ${s.to}에 ${hhmm(r.arrive)} 도착. 목표는 ${s.arrive}.`};
 }
@@ -552,8 +552,13 @@ function drawDial(p){
   const res = sl >= 0 ? `${s.arrive} 목표에 ${dur(sl)} 남음` : `${s.arrive} 목표에 ${dur(-sl)} 지각`;
   const [kx,ky] = polar(selOffset / W * 360);
   const ticks = [0,.25,.5,.75].map(f=>{
-    const [x,y]=polar(f*360, R+24);
-    return `<text x="${x}" y="${y+4}" text-anchor="middle" class="center-sm">${f ? "+"+Math.round(W*f)+"분" : "지금"}</text>`;
+    // 좌우 눈금은 원 바깥쪽으로 붙여서 링이랑 안 겹치게
+    const side = f === .25 ? "start" : f === .75 ? "end" : "middle";
+    const [x,y] = polar(f*360, side === "middle" ? R+24 : R+15);
+    const m = Math.round(W*f);
+    // 1시간 넘으면 두 줄로 ("+1시간" / "30분")
+    if(m >= 60 && m % 60) return `<text x="${x}" y="${y-3}" text-anchor="${side}" class="center-sm"><tspan x="${x}">+${Math.floor(m/60)}시간</tspan><tspan x="${x}" dy="13">${m%60}분</tspan></text>`;
+    return `<text x="${x}" y="${y+4}" text-anchor="${side}" class="center-sm">${f ? "+"+dur(m) : "지금"}</text>`;
   }).join("");
   $("dial").innerHTML = `
     <circle cx="${CX}" cy="${CY}" r="${R}" fill="none" stroke="var(--soft)" stroke-width="18"/>
@@ -562,7 +567,9 @@ function drawDial(p){
     <path d="${arc(deg(p.leave), deg(p.target))}" stroke="var(--travel)" stroke-width="18" fill="none"/>
     ${ticks}
     <circle cx="${kx}" cy="${ky}" r="14" fill="var(--accent)" stroke="var(--ink)" stroke-width="3"/>
-    <text x="${CX}" y="${CY-20}" text-anchor="middle" class="center-big">${selOffset===0?"지금 나가면":selOffset+"분 뒤에 나가면"}</text>
+    ${selOffset < 60
+      ? `<text x="${CX}" y="${CY-20}" text-anchor="middle" class="center-big">${selOffset===0 ? "지금 나가면" : selOffset+"분 뒤에 나가면"}</text>`
+      : `<text x="${CX}" y="${CY-40}" text-anchor="middle" class="center-big">${dur(selOffset)} 뒤에</text><text x="${CX}" y="${CY-18}" text-anchor="middle" class="center-big">나가면</text>`}
     <text x="${CX}" y="${CY+4}" text-anchor="middle" class="center-sm">${hhmm(r.legs[0].board)} 열차 · ${hhmm(r.arrive)} 도착</text>
     <text x="${CX}" y="${CY+30}" text-anchor="middle" class="center-res" fill="${color}">${res}</text>`;
 }
