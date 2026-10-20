@@ -261,18 +261,18 @@ details summary{cursor:pointer;color:var(--muted);font-size:13px}
 <script>
 const MIN = 60000, XFER_WALK = 4;
 
-// ---- 노선 메타 (lines.py 와 같음) ----
+// ---- 노선 메타 (lines.py 와 같음). first/last: 대략적인 첫차·막차, 24:00 넘으면 다음 날 새벽 ----
 const LINE_META = {
-  "1001":{name:"1호선",short:"1",c:"#0052A4",ride:2.5,h:6}, "1002":{name:"2호선",short:"2",c:"#00A84D",ride:2,h:4},
-  "1003":{name:"3호선",short:"3",c:"#EF7C1C",ride:2,h:6},   "1004":{name:"4호선",short:"4",c:"#00A5DE",ride:2,h:5},
-  "1005":{name:"5호선",short:"5",c:"#996CAC",ride:2,h:6},   "1006":{name:"6호선",short:"6",c:"#CD7C2F",ride:2,h:7},
-  "1007":{name:"7호선",short:"7",c:"#747F00",ride:2,h:6},   "1008":{name:"8호선",short:"8",c:"#E6186C",ride:2,h:6},
-  "1009":{name:"9호선",short:"9",c:"#BDB092",ride:2,h:6},   "1063":{name:"경의중앙선",short:"경의",c:"#77C4A3",ride:3,h:12},
-  "1065":{name:"공항철도",short:"공항",c:"#0090D2",ride:3.5,h:10}, "1067":{name:"경춘선",short:"경춘",c:"#0C8E72",ride:3.5,h:20},
-  "1075":{name:"수인분당선",short:"수분",c:"#FABE00",ride:2.5,h:8}, "1077":{name:"신분당선",short:"신분",c:"#D4003B",ride:3,h:6},
-  "1081":{name:"경강선",short:"경강",c:"#003DA5",ride:4,h:15}, "1092":{name:"우이신설선",short:"우이",c:"#B0CE18",ride:1.5,h:5},
-  "1093":{name:"서해선",short:"서해",c:"#81A914",ride:3,h:15}, "1094":{name:"신림선",short:"신림",c:"#6789CA",ride:1.5,h:5},
-  "1032":{name:"GTX-A",short:"GTX",c:"#9A6292",ride:5,h:10},
+  "1001":{name:"1호선",short:"1",c:"#0052A4",ride:2.5,h:6,first:"05:20",last:"24:50"}, "1002":{name:"2호선",short:"2",c:"#00A84D",ride:2,h:4,first:"05:30",last:"25:00"},
+  "1003":{name:"3호선",short:"3",c:"#EF7C1C",ride:2,h:6,first:"05:30",last:"25:00"},   "1004":{name:"4호선",short:"4",c:"#00A5DE",ride:2,h:5,first:"05:30",last:"25:00"},
+  "1005":{name:"5호선",short:"5",c:"#996CAC",ride:2,h:6,first:"05:30",last:"25:00"},   "1006":{name:"6호선",short:"6",c:"#CD7C2F",ride:2,h:7,first:"05:30",last:"25:00"},
+  "1007":{name:"7호선",short:"7",c:"#747F00",ride:2,h:6,first:"05:30",last:"25:00"},   "1008":{name:"8호선",short:"8",c:"#E6186C",ride:2,h:6,first:"05:30",last:"25:00"},
+  "1009":{name:"9호선",short:"9",c:"#BDB092",ride:2,h:6,first:"05:30",last:"24:50"},   "1063":{name:"경의중앙선",short:"경의",c:"#77C4A3",ride:3,h:12,first:"05:20",last:"24:30"},
+  "1065":{name:"공항철도",short:"공항",c:"#0090D2",ride:3.5,h:10,first:"05:20",last:"24:00"}, "1067":{name:"경춘선",short:"경춘",c:"#0C8E72",ride:3.5,h:20,first:"05:10",last:"24:20"},
+  "1075":{name:"수인분당선",short:"수분",c:"#FABE00",ride:2.5,h:8,first:"05:30",last:"24:40"}, "1077":{name:"신분당선",short:"신분",c:"#D4003B",ride:3,h:6,first:"05:30",last:"24:50"},
+  "1081":{name:"경강선",short:"경강",c:"#003DA5",ride:4,h:15,first:"05:30",last:"24:00"}, "1092":{name:"우이신설선",short:"우이",c:"#B0CE18",ride:1.5,h:5,first:"05:30",last:"24:40"},
+  "1093":{name:"서해선",short:"서해",c:"#81A914",ride:3,h:15,first:"05:30",last:"24:00"}, "1094":{name:"신림선",short:"신림",c:"#6789CA",ride:1.5,h:5,first:"05:30",last:"24:40"},
+  "1032":{name:"GTX-A",short:"GTX",c:"#9A6292",ride:5,h:10,first:"05:30",last:"24:00"},
 };
 
 // ---- 데모 노선 (API 키 없을 때만): 1·2·3·4·5·7·9호선 주요 구간 ----
@@ -330,6 +330,12 @@ const $ = id => document.getElementById(id);
 const now = () => Date.now() + simMin * MIN;
 const hhmm = ms => new Date(ms).toLocaleTimeString("ko-KR",{hour:"2-digit",minute:"2-digit",hour12:false});
 const mins = ms => Math.round(ms / MIN);
+// 새벽 4시 전까지는 "오늘 밤"으로 침: 23:58에 00:15는 그냥 "00:15", 08:07은 "내일 08:07",
+// 01:33에 05:32는 같은 날이라 "아침 05:32"
+function when(ms){
+  if(dayOf(ms - 4*60*MIN) <= dayOf(now() - 4*60*MIN)) return hhmm(ms);
+  return (dayOf(ms) === dayOf(now()) ? "아침 " : "내일 ") + hhmm(ms);
+}
 const dur = m => m >= 60 ? `${Math.floor(m/60)}시간${m%60 ? " "+m%60+"분" : ""}` : `${m}분`;
 const ready = () => !!(route && s.arrive);
 const isLive = () => STATUS.key && !NET.demo;
@@ -370,12 +376,36 @@ const legRide = l => Math.round(l.stops * meta(l.l).ride);
 
 // ---- 열차 시각: 첫 구간은 실시간, 나머지는 배차 간격으로 추정 ----
 function hash(str){ let h = 7; for(const ch of str) h = (h*31 + ch.charCodeAt(0)) >>> 0; return h; }
-function modelNext(leg, t){
+// ---- 운행 시간: 첫차~막차 밖이면 다음 첫차로 ----
+const hm = str => { const [h, m] = (str||"").split(":").map(Number); return (h*60 + m) * MIN; };
+const dayOf = t => { const d = new Date(t); d.setHours(0,0,0,0); return d.getTime(); };
+function inService(l, t){
+  const m = meta(l); if(!m.first) return true;
+  const D = dayOf(t);
+  // 막차가 24:00 넘으면 전날 운행이 새벽까지 이어짐
+  return [D - 24*60*MIN, D].some(d => t >= d + hm(m.first) && t <= d + hm(m.last));
+}
+function nextServiceStart(l, t){
+  const D = dayOf(t), f = hm(meta(l).first);
+  return t <= D + f ? D + f : D + 24*60*MIN + f;
+}
+function scheduleNext(leg, t){
   const m = meta(leg.l), h = m.h*MIN;
-  const day = new Date(t); day.setHours(0,0,0,0);
-  const first = day.getTime() + (hash(leg.ids[0]+leg.next) % m.h)*MIN + (NET.demo ? s.delay*MIN : 0);
+  const first = dayOf(t) + (hash(leg.ids[0]+leg.next) % m.h)*MIN + (NET.demo ? s.delay*MIN : 0);
   return first + Math.ceil((t - first)/h)*h;
 }
+function modelNext(leg, t){
+  const raw = scheduleNext(leg, t);
+  return inService(leg.l, raw) ? raw : scheduleNext(leg, nextServiceStart(leg.l, raw));
+}
+// 이 열차 다음에 오늘 열차가 더 없으면 막차. "live": 실시간 막차 표시, "model": 운행 시간으로 추정, false: 아님
+function isLastTrain(leg, board, first){
+  const lv = first ? liveTrains(leg) : [];
+  const hit = lv.find(x => Math.abs(x.at - board) < 30000);
+  if(hit && hit.last) return "live";
+  return modelNext(leg, board + MIN) - board > 2*60*MIN ? "model" : false;
+}
+const lastWord = kind => kind === "live" ? "막차야" : "거의 막차야";
 function liveTrains(leg){
   if(!isLive() || !live || live.station !== apiName(leg.ids[0])) return [];
   const ride = meta(leg.l).ride, seen = new Set(), out = [];
@@ -400,8 +430,12 @@ function nextTrain(leg, t, first){
   if(lv.length){
     const hit = lv.find(x => x.at >= t);
     if(hit) return hit.at;
+    // 실시간에 막차 표시가 있었으면 그 뒤로는 다음 날 첫차
+    const lastCar = lv.find(x => x.last);
+    if(lastCar) return modelNext(leg, nextServiceStart(leg.l, lastCar.at + MIN));
     const h = meta(leg.l).h*MIN, last = lv[lv.length-1].at;
-    return last + Math.ceil((t - last)/h)*h;
+    const ext = last + Math.ceil((t - last)/h)*h;
+    return inService(leg.l, ext) ? ext : modelNext(leg, ext);
   }
   return modelNext(leg, t);
 }
@@ -411,9 +445,11 @@ function simulate(leave){
     if(k > 0) t += XFER_WALK*MIN;
     const readyAt = t, board = nextTrain(l, t, k === 0);
     t = board + legRide(l)*MIN;
-    return {...l, readyAt, board, alight:t};
+    // cut: 막차가 끊겨서 다음 날 첫차를 기다려야 함
+    return {...l, readyAt, board, alight:t, cut: board - readyAt > 2*60*MIN};
   });
-  return {leave, legs, arrive: t + s.walkFrom*MIN};
+  const cutLeg = legs.find(l => l.cut);
+  return {leave, legs, arrive: t + s.walkFrom*MIN, cut: cutLeg || null};
 }
 function targetMs(){
   const [h,m] = s.arrive.split(":").map(Number);
@@ -439,21 +475,32 @@ function judge(p, t){
   const toPrep = mins(p.prepStart - t), toDep = mins(p.leave - t), first = p.sim.legs[0];
   const src = isLive() && liveTrains(first).length ? " (실시간 기준)" : "";
   const xf = route.length > 1 ? ` ${xferText()}까지 쳐서 계산한 거야.` : "";
+  // 막차 경고: 계획한 열차 중 하나라도 막차면
+  const lastK = p.sim.legs.findIndex((l, k) => isLastTrain(l, l.board, k === 0));
+  const lastLeg = lastK >= 0 ? p.sim.legs[lastK] : null, lastKind = lastLeg && isLastTrain(lastLeg, lastLeg.board, lastK === 0);
+  const lastTxt = !lastLeg ? "" : lastLeg === first ? ` 이게 ${lastWord(lastKind)}. 놓치면 끝.`
+    : ` ${lastLeg.from}에서 갈아탈 ${meta(lastLeg.l).name}이 ${lastWord(lastKind)}. 놓치면 끝.`;
+  // 목표보다 한참 일찍 도착하는 계획이면 막차 때문
+  const early = slackOf(p.sim, p.target) > 45 && simulate(p.leave + 15*MIN).cut ? " 막차 때문에 일찍 나가야 돼." : "";
   if(t > p.target) return {phase:"over", level:"late", title:"약속 시간 지났어.", body:"내일 목표 다시 정해."};
-  if(toPrep > 10) return {phase:"free", level:"", title:"아직 안 나가도 돼.", body:`${s.arrive}까지 ${s.to} 가려면 준비는 ${dur(toPrep)} 뒤, 집에서 나가는 건 ${dur(toDep)} 뒤야.`};
-  if(toPrep > 0) return {phase:"soon", level:"warn", title:"하던 거 슬슬 정리해.", body:`${toPrep}분 뒤에 준비 시작해야 ${s.arrive}까지 ${s.to} 도착해.`};
-  if(toDep > 5) return {phase:"prep", level:"warn", title:"지금 준비 시작해.", body:`지금 하면 안 뛰어도 돼. ${first.from} ${hhmm(first.board)} 열차${src} 타야 돼.${xf}`};
-  if(toDep > 0) return {phase:"shoes", level:"urgent", title:"신발 신어.", body:`${toDep}분 안에 안 나가면 ${first.from} ${hhmm(first.board)} 열차${src} 놓쳐.`};
+  if(toPrep > 10) return {phase:"free", level:"", title:"아직 안 나가도 돼.", body:`${s.arrive}까지 ${s.to} 가려면 준비는 ${dur(toPrep)} 뒤, 집에서 나가는 건 ${dur(toDep)} 뒤야.${early}${lastTxt}`};
+  if(toPrep > 0) return {phase:"soon", level:"warn", title:"하던 거 슬슬 정리해.", body:`${toPrep}분 뒤에 준비 시작해야 ${s.arrive}까지 ${s.to} 도착해.${early}${lastTxt}`};
+  if(toDep > 5) return {phase:"prep", level:lastTxt ? "urgent" : "warn", title:"지금 준비 시작해.", body:`지금 하면 안 뛰어도 돼. ${first.from} ${hhmm(first.board)} 열차${src} 타야 돼.${xf}${early}${lastTxt}`};
+  if(toDep > 0) return {phase:"shoes", level:"urgent", title:"신발 신어.", body:`${toDep}분 안에 안 나가면 ${first.from} ${hhmm(first.board)} 열차${src} 놓쳐.${lastTxt}`};
   const r = simulate(t), sl = slackOf(r, p.target);
+  if(r.cut && sl < 0) return {phase:"cut", level:"late", title:"막차 끊겼어.",
+    body:`지금 나가도 ${r.cut.from} ${meta(r.cut.l).name}은 첫차 ${when(r.cut.board)}까지 없어. 지하철로는 ${s.to}에 ${when(r.arrive)} 도착이야. 택시 타.`};
   if(atHome) return {phase:"home", level:"late", title:"아직 집이야?", body:`지금 바로 나가. 지금 나가도 ${sl >= 0 ? sl+"분 남아" : -sl+"분 늦어"}.`};
   if(sl >= 0) return {phase:"go", level:"urgent", title:"나갈 시간 지났어.", body:`지금 나가면 ${s.to}에 ${hhmm(r.arrive)} 도착. ${s.arrive}보다 ${sl}분 빨라. 빨리 걸어.`};
-  return {phase:"late", level:"late", title:"너 개늦는다.", body:`지금 나가도 ${s.to}에 ${hhmm(r.arrive)} 도착. ${s.arrive}보다 ${-sl}분 늦어.${route.length>1 ? " 환승까지 치면 답 없어." : ""} 늦는다고 지금 연락해.`};
+  return {phase:"late", level:"late", title:"너 개늦는다.", body:`지금 나가도 ${s.to}에 ${when(r.arrive)} 도착. ${s.arrive}보다 ${dur(-sl)} 늦어.${route.length>1 ? " 환승까지 치면 답 없어." : ""} 늦는다고 지금 연락해.`};
 }
 function whatIf(off){
   const p = plan(), r = simulate(now() + off*MIN), sl = slackOf(r, p.target);
-  const when = off === 0 ? "지금 나가면" : `${dur(off)} 뒤에 나가면`;
+  const lead = off === 0 ? "지금 나가면" : `${dur(off)} 뒤에 나가면`;
+  if(r.cut && sl < 0) return {level:"late", title:"막차 끊겨. 지하철로는 못 가.",
+    body:`${lead} ${r.cut.from}에서 ${meta(r.cut.l).name} 첫차 ${when(r.cut.board)}까지 기다려야 돼. ${s.to} 도착은 ${when(r.arrive)}, 목표는 ${s.arrive}.`};
   const title = sl >= 5 ? `${dur(sl)} 남아. 괜찮아.` : sl > 0 ? `${sl}분 남아. 빠듯해.` : sl === 0 ? "딱 맞춰 도착. 여유 없어." : `${dur(-sl)} 지각. 그러지 마.`;
-  return {level: sl >= 5 ? "" : sl >= 0 ? "warn" : "late", title, body:`${when} ${r.legs[0].from} ${hhmm(r.legs[0].board)} 열차 타고 ${s.to}에 ${hhmm(r.arrive)} 도착. 목표는 ${s.arrive}.`};
+  return {level: sl >= 5 ? "" : sl >= 0 ? "warn" : "late", title, body:`${lead} ${r.legs[0].from} ${when(r.legs[0].board)} 열차 타고 ${s.to}에 ${when(r.arrive)} 도착. 목표는 ${s.arrive}.${(k => k ? ` ${lastWord(k)}, 놓치면 끝.` : "")(r.legs.map((l, k) => isLastTrain(l, l.board, k === 0)).find(Boolean))}`};
 }
 function current(){ return judge(ready() ? plan() : null, now()); }
 function say(m, who="agent"){
@@ -549,7 +596,8 @@ function drawDial(p){
   $("offset").max = W;
   const r = simulate(t + selOffset*MIN), sl = slackOf(r, p.target);
   const color = sl >= 5 ? "var(--ok)" : sl >= 0 ? "var(--prep)" : "var(--late)";
-  const res = sl >= 0 ? `${s.arrive} 목표에 ${dur(sl)} 남음` : `${s.arrive} 목표에 ${dur(-sl)} 지각`;
+  const res = r.cut && sl < 0 ? `막차 끊김 · 첫차 ${hhmm(r.cut.board)}`
+    : sl >= 0 ? `${s.arrive} 목표에 ${dur(sl)} 남음` : `${s.arrive} 목표에 ${dur(-sl)} 지각`;
   const [kx,ky] = polar(selOffset / W * 360);
   const ticks = [0,.25,.5,.75].map(f=>{
     // 좌우 눈금은 원 바깥쪽으로 붙여서 링이랑 안 겹치게
@@ -595,8 +643,9 @@ function renderRoute(p){
   rows.push(li(hhmm(sim.leave), past ? "지금 나가면" : "집에서 나가기", `${sim.legs[0].from}역까지 걸어서 ${s.walkTo}분`, "var(--ink)", "var(--soft)"));
   sim.legs.forEach((l, k) => {
     const c = meta(l.l).c;
-    if(k > 0) rows.push(li(hhmm(l.readyAt), `${l.from}에서 ${meta(l.l).name}으로 갈아타기`, `걷는 데 ${XFER_WALK}분 + 기다리는 데 ${mins(l.board - l.readyAt)}분`, "var(--late)", "var(--soft)", "xfer"));
-    rows.push(li(hhmm(l.board), `${l.from} ${badge(l.l)} 탑승`, `${l.toward} · ${l.stops}정거장 · 약 ${legRide(l)}분`, c, c));
+    if(k > 0) rows.push(li(hhmm(l.readyAt), `${l.from}에서 ${meta(l.l).name}으로 갈아타기`, l.cut ? `막차 끊김 · 첫차까지 ${dur(mins(l.board - l.readyAt))} 기다려야 돼` : `걷는 데 ${XFER_WALK}분 + 기다리는 데 ${mins(l.board - l.readyAt)}분`, "var(--late)", "var(--soft)", "xfer"));
+    const tag = k === 0 && l.cut ? " · 막차 끊겨서 첫차" : isLastTrain(l, l.board, k === 0) === "live" ? " · 막차" : isLastTrain(l, l.board, k === 0) ? " · 거의 막차" : "";
+    rows.push(li(when(l.board), `${l.from} ${badge(l.l)} 탑승`, `${l.toward} · ${l.stops}정거장 · 약 ${legRide(l)}분${tag}`, c, c));
     rows.push(li(hhmm(l.alight), `${l.to} 하차`, "", c, "var(--soft)"));
   });
   const color = sl >= 0 ? "var(--ok)" : "var(--late)";
@@ -683,7 +732,7 @@ function renderLive(p){
   const myWait = Math.ceil((leg.board - t)/MIN);
   svg += `<text x="4" y="172" font-size="12.5" fill="var(--ink)" font-weight="700">${mineShown
     ? "\"나 타!\" 하는 애가 네 열차야. 놓치지 마."
-    : `네 열차는 ${hhmm(leg.board)} (${myWait}분 뒤). 아직 저 멀리 있어.`}</text>`;
+    : `네 열차는 ${when(leg.board)} (${dur(myWait)} 뒤). 아직 저 멀리 있어.`}</text>`;
   $("strip").innerHTML = svg;
   $("trains").innerHTML = list.join("");
   $("liveTitle").innerHTML = `${leg.from} ${badge(leg.l)} ${leg.toward}`;
