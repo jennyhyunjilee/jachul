@@ -10,49 +10,86 @@
 :root{
   --bg:#f6f5f1; --card:#ffffff; --ink:#1d1d1b; --muted:#6b6a66; --line:#e4e2dc;
   --free:#cfe3d4; --prep:#f2b950; --travel:#3f7fd9; --late:#d9534f; --ok:#2f8f5b;
-  --chip:#efeee9; --me:#1d1d1b; --meInk:#f6f5f1;
+  --chip:#efeee9; --me:#1d1d1b; --meInk:#f6f5f1; --goal:#1d1d1b; --goalInk:#f6f5f1; --goalMuted:#b9b8b2;
 }
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="light"]){
     --bg:#141413; --card:#1f1f1d; --ink:#f1f0ea; --muted:#a3a29c; --line:#34332f;
     --free:#2a3b2f; --prep:#e0a63c; --travel:#5b95e8; --late:#ef6b66; --ok:#4cb37b;
-    --chip:#2a2a27; --me:#f1f0ea; --meInk:#141413;
+    --chip:#2a2a27; --me:#f1f0ea; --meInk:#141413; --goal:#2b2b28; --goalInk:#f1f0ea; --goalMuted:#a3a29c;
   }
 }
 :root[data-theme="dark"]{
   --bg:#141413; --card:#1f1f1d; --ink:#f1f0ea; --muted:#a3a29c; --line:#34332f;
   --free:#2a3b2f; --prep:#e0a63c; --travel:#5b95e8; --late:#ef6b66; --ok:#4cb37b;
-  --chip:#2a2a27; --me:#f1f0ea; --meInk:#141413;
+  --chip:#2a2a27; --me:#f1f0ea; --meInk:#141413; --goal:#2b2b28; --goalInk:#f1f0ea; --goalMuted:#a3a29c;
 }
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--ink);font-family:"Noto Sans KR",system-ui,sans-serif;line-height:1.5}
-main{max-width:480px;margin:0 auto;padding:20px 16px 48px}
-header{display:flex;align-items:center;gap:10px;margin-bottom:16px}
-h1{font-size:18px;margin:0;font-weight:900;flex:1}
+main{max-width:480px;margin:0 auto;padding:16px 16px 48px}
+header{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+h1{font-size:17px;margin:0;font-weight:900;flex:1}
 .clock{color:var(--muted);font-variant-numeric:tabular-nums}
 .icon{border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:999px;width:40px;height:40px;font-size:18px;cursor:pointer;padding:0}
-.trip{font-size:13px;color:var(--muted);margin:-8px 0 14px}
+button{font:inherit;border:1px solid var(--line);background:var(--chip);color:var(--ink);border-radius:999px;padding:9px 14px;cursor:pointer}
+.hint{font-size:12.5px;color:var(--muted);margin:0}
+.lb{display:inline-flex;align-items:center;justify-content:center;min-width:20px;height:20px;padding:0 5px;border-radius:999px;color:#fff;font-size:11.5px;font-weight:700;vertical-align:1px}
 
-/* 에이전트 대화 */
-.feed{display:flex;flex-direction:column;gap:10px;min-height:120px;margin-bottom:16px}
-.msg{max-width:88%;padding:12px 14px;border-radius:18px;font-size:16px;animation:pop .25s ease-out}
+/* 목표 카드: 모든 판단의 기준 */
+.goal{background:var(--goal);color:var(--goalInk);border-radius:24px;padding:18px;margin-bottom:16px}
+.goal-label{font-size:12px;color:var(--goalMuted);letter-spacing:.04em}
+.goal-head{font-size:24px;font-weight:900;margin:2px 0 14px;letter-spacing:-.02em}
+.goal-head .empty{color:var(--goalMuted)}
+.stations{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);gap:6px;align-items:stretch}
+.field{display:block;min-width:0;overflow:hidden;text-align:left;border-radius:16px;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.07);color:var(--goalInk);padding:10px 12px;width:100%;min-height:62px}
+.field small{display:block;font-size:11.5px;color:var(--goalMuted)}
+.field .v{font-size:16px;font-weight:700;white-space:nowrap}
+.field .v.empty{color:var(--goalMuted);font-weight:500}
+.swap{align-self:center;background:transparent;color:var(--goalInk);border-color:rgba(255,255,255,.2);width:36px;height:36px;padding:0}
+.goal-row{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px}
+.field input[type=time]{font:inherit;font-size:16px;font-weight:700;background:transparent;border:none;color:var(--goalInk);padding:0;width:100%;color-scheme:dark}
+.stepper{display:flex;align-items:center;gap:6px}
+.stepper button{background:transparent;color:var(--goalInk);border-color:rgba(255,255,255,.2);width:30px;height:30px;padding:0;line-height:1}
+.stepper .v{flex:1;text-align:center}
+.goal-sum{margin:12px 0 0;font-size:13px;color:var(--goalMuted)}
+
+/* 에이전트 */
+.feed{display:flex;flex-direction:column;gap:10px;margin-bottom:12px}
+.msg{max-width:90%;padding:12px 14px;border-radius:18px;font-size:15.5px;animation:pop .25s ease-out}
 .msg.agent{background:var(--card);border:1px solid var(--line);border-top-left-radius:6px;align-self:flex-start;border-left:4px solid var(--free)}
 .msg.agent.warn{border-left-color:var(--prep)}
 .msg.agent.urgent{border-left-color:var(--travel)}
 .msg.agent.late{border-left-color:var(--late)}
-.msg.me{background:var(--me);color:var(--meInk);align-self:flex-end;border-top-right-radius:6px;font-size:15px}
-.msg b{display:block;font-size:17px;margin-bottom:2px}
-.msg .time{display:block;font-size:11px;color:var(--muted);margin-top:4px;font-variant-numeric:tabular-nums}
+.msg.me{background:var(--me);color:var(--meInk);align-self:flex-end;border-top-right-radius:6px;font-size:14.5px}
+.msg b{display:block;font-size:18px;margin-bottom:2px}
+.msg .time{display:block;font-size:11px;color:var(--muted);margin-top:4px}
 @keyframes pop{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.ask{width:100%;padding:17px;font-size:18px;font-weight:700;background:var(--ink);color:var(--bg);border:none;border-radius:18px}
+.ask:disabled{opacity:.35}
+.chips{display:flex;gap:8px;margin:10px 0 18px;flex-wrap:wrap}
 
-button{font:inherit;border:1px solid var(--line);background:var(--chip);color:var(--ink);border-radius:999px;padding:9px 14px;cursor:pointer}
-.ask{width:100%;padding:18px;font-size:18px;font-weight:700;background:var(--ink);color:var(--bg);border:none;border-radius:18px}
-.ask:active{transform:scale(.98)}
-.chips{display:flex;gap:8px;margin:10px 0 20px;flex-wrap:wrap}
+.card{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:18px;margin-bottom:14px}
+.card h2{font-size:15px;margin:0 0 2px}
+body:not(.ready) .needgoal{display:none !important}
 
-.card{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:18px;margin-bottom:16px}
-.card h2{font-size:15px;margin:0 0 4px}
-.hint{font-size:12.5px;color:var(--muted);margin:0}
+/* 경로 타임라인 */
+.route{list-style:none;margin:12px 0 0;padding:0}
+.route li{display:grid;grid-template-columns:48px 18px 1fr;gap:0 10px;align-items:start;min-height:44px}
+.route .t{font-variant-numeric:tabular-nums;font-weight:700;font-size:14px;padding-top:1px}
+.route .rail{position:relative;height:100%;display:flex;justify-content:center}
+.route .rail::before{content:"";position:absolute;top:0;bottom:0;width:4px;border-radius:2px;background:var(--seg,var(--line))}
+.route li:last-child .rail::before{display:none}
+.route .dot{position:relative;width:14px;height:14px;border-radius:50%;background:var(--card);border:3px solid var(--dotc,var(--ink));margin-top:4px}
+.route .what{font-size:14.5px;padding-bottom:12px}
+.route .what small{display:block;color:var(--muted);font-size:12.5px}
+.route .xfer .what{color:var(--late);font-weight:700}
+.route .verdict{font-weight:700}
+
+/* 실시간 열차 */
+svg.strip{width:100%;height:auto;display:block;margin-top:10px}
+.strip text{font-family:inherit}
+
+/* 다이얼 */
 .dialwrap{display:flex;flex-direction:column;align-items:center}
 .dialwrap h2,.dialwrap .hint{align-self:flex-start}
 svg.dial{width:100%;max-width:280px;touch-action:none;cursor:grab;user-select:none;margin-top:6px}
@@ -61,21 +98,24 @@ svg.dial{width:100%;max-width:280px;touch-action:none;cursor:grab;user-select:no
 .center-res{font-size:14px;font-weight:700}
 input[type=range]{width:100%;accent-color:var(--travel)}
 
-/* 설정 */
-dialog{border:none;border-radius:22px;padding:0;width:min(440px,calc(100% - 32px));background:var(--card);color:var(--ink)}
+/* 시트 */
+dialog{border:none;border-radius:22px;padding:0;width:min(440px,calc(100% - 24px));max-height:86vh;background:var(--card);color:var(--ink)}
 dialog::backdrop{background:rgba(0,0,0,.45)}
-.sheet{padding:20px}
+.sheet{padding:18px}
 .sheet h2{margin:0 0 4px;font-size:18px}
 .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:14px}
 .full{grid-column:1/-1}
 label{display:block;font-size:12.5px;color:var(--muted);margin-bottom:4px}
-input,select{font:inherit;width:100%;padding:10px 12px;border-radius:12px;border:1px solid var(--line);background:var(--bg);color:var(--ink)}
+.sheet input,.sheet select{font:inherit;width:100%;padding:10px 12px;border-radius:12px;border:1px solid var(--line);background:var(--bg);color:var(--ink)}
 .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:14px}
 .pill{font-size:12px;padding:4px 10px;border-radius:999px;background:var(--chip);color:var(--muted)}
 .pill.on{background:var(--ok);color:#fff}
 .save{width:100%;margin-top:16px;padding:14px;background:var(--ink);color:var(--bg);border:none;border-radius:14px;font-weight:700}
 details{margin-top:14px}
 details summary{cursor:pointer;color:var(--muted);font-size:13px}
+.list{list-style:none;margin:10px 0 0;padding:0;max-height:50vh;overflow:auto}
+.list button{width:100%;text-align:left;border:none;border-bottom:1px solid var(--line);border-radius:0;background:transparent;padding:12px 4px;display:flex;align-items:center;gap:8px;font-size:16px}
+.list .sec{font-size:12px;color:var(--muted);padding:10px 4px 4px}
 </style>
 </head>
 <body>
@@ -85,37 +125,75 @@ details summary{cursor:pointer;color:var(--muted);font-size:13px}
     <span class="clock" id="clock">--:--</span>
     <button class="icon" id="openSettings" aria-label="설정">⚙</button>
   </header>
-  <p class="trip" id="trip"></p>
 
+  <!-- 1. 목표: 이게 없으면 아무 판단도 안 함 -->
+  <section class="goal" aria-label="오늘 목표">
+    <div class="goal-label">오늘 목표</div>
+    <div class="goal-head" id="goalHead"></div>
+    <div class="stations">
+      <button class="field" id="fromBtn"><small>어디서 타?</small><span class="v" id="fromV"></span></button>
+      <button class="swap" id="swapBtn" aria-label="출발역과 도착역 바꾸기">⇄</button>
+      <button class="field" id="toBtn"><small>어디서 내려?</small><span class="v" id="toV"></span></button>
+    </div>
+    <div class="goal-row">
+      <label class="field"><small>몇 시까지?</small><input type="time" id="arriveIn"></label>
+      <div class="field"><small>준비 시간</small>
+        <div class="stepper"><button id="prepMinus" aria-label="준비 시간 5분 줄이기">−</button><span class="v" id="prepV"></span><button id="prepPlus" aria-label="준비 시간 5분 늘리기">+</button></div>
+      </div>
+    </div>
+    <p class="goal-sum" id="goalSum"></p>
+  </section>
+
+  <!-- 2. 에이전트 -->
   <section class="feed" id="feed" aria-live="polite"></section>
-
   <button class="ask" id="ask">나 지금 어때?</button>
-  <div class="chips">
+  <div class="chips needgoal" id="whatChips">
     <button data-what="0">지금 나가면?</button>
     <button data-what="5">5분 뒤엔?</button>
     <button data-what="10">10분 뒤엔?</button>
   </div>
 
-  <section class="card dialwrap">
+  <!-- 3. 경로 -->
+  <section class="card needgoal">
+    <h2>이렇게 가</h2>
+    <p class="hint" id="routeHint"></p>
+    <ol class="route" id="route"></ol>
+  </section>
+
+  <!-- 4. 실시간 열차 -->
+  <section class="card needgoal">
+    <h2 id="liveTitle">지금 오는 열차</h2>
+    <p class="hint">데모 위치예요. 서울시 실시간 도착정보 API를 연결하면 진짜 위치로 바뀌어요.</p>
+    <svg class="strip" id="strip" viewBox="0 0 340 122" role="img" aria-label="다가오는 열차 위치"></svg>
+  </section>
+
+  <!-- 5. 돌려보기 -->
+  <section class="card dialwrap needgoal">
     <h2>돌려봐</h2>
-    <p class="hint">언제 나가면 어떻게 되는지 보여줄게.</p>
+    <p class="hint">언제 나가면 목표 시간에 맞는지 바로 보여줄게.</p>
     <svg class="dial" id="dial" viewBox="0 0 300 300" role="img" aria-label="출발 시각 다이얼"></svg>
     <input type="range" id="offset" min="0" max="60" value="0" aria-label="몇 분 뒤 출발할지">
   </section>
 </main>
 
+<!-- 역 고르기 -->
+<dialog id="picker">
+  <div class="sheet">
+    <h2 id="pickerTitle">역 고르기</h2>
+    <input id="pickerSearch" type="search" placeholder="역 이름 검색 (예: 강남)" autocomplete="off">
+    <ul class="list" id="pickerList"></ul>
+    <button class="save" id="pickerClose" style="background:var(--chip);color:var(--ink)">닫기</button>
+  </div>
+</dialog>
+
+<!-- 자주 안 바꾸는 설정 -->
 <dialog id="settings">
   <form class="sheet" id="form" method="dialog">
     <h2>설정</h2>
-    <p class="hint">한 번만 넣어. 다음부터는 이대로 기억해.</p>
+    <p class="hint">한 번 넣으면 이대로 기억해.</p>
     <div class="grid">
-      <div class="full"><label for="dest">어디 가?</label><input id="dest" name="dest" required></div>
-      <div><label for="arrive">몇 시까지?</label><input id="arrive" name="arrive" type="time" required></div>
-      <div><label for="prep">준비 몇 분 걸려?</label><input id="prep" name="prep" type="number" min="0"></div>
-      <div><label for="walkTo">집 → 역 (분)</label><input id="walkTo" name="walkTo" type="number" min="0"></div>
-      <div><label for="ride">지하철 타는 시간 (분)</label><input id="ride" name="ride" type="number" min="1"></div>
-      <div><label for="walkFrom">역 → 목적지 (분)</label><input id="walkFrom" name="walkFrom" type="number" min="0"></div>
-      <div><label for="headway">배차 간격 (분)</label><input id="headway" name="headway" type="number" min="1"></div>
+      <div><label for="walkTo">집 → 출발역 도보 (분)</label><input id="walkTo" name="walkTo" type="number" min="0"></div>
+      <div><label for="walkFrom">도착역 → 목적지 도보 (분)</label><input id="walkFrom" name="walkFrom" type="number" min="0"></div>
       <div><label for="buffer">여유 (분)</label><input id="buffer" name="buffer" type="number" min="0"></div>
       <div><label for="interval">얼마나 자주 보챌까?</label>
         <select id="interval" name="interval">
@@ -130,7 +208,7 @@ details summary{cursor:pointer;color:var(--muted);font-size:13px}
     <details>
       <summary>테스트용</summary>
       <div class="grid">
-        <div><label for="delay">지연 (분, 데모)</label><input id="delay" name="delay" type="number" min="0"></div>
+        <div><label for="delay">열차 지연 (분)</label><input id="delay" name="delay" type="number" min="0"></div>
         <div><label for="sim">시간 당기기 (분)</label><input id="sim" type="range" min="0" max="120" value="0"></div>
       </div>
     </details>
@@ -139,15 +217,32 @@ details summary{cursor:pointer;color:var(--muted);font-size:13px}
 </dialog>
 
 <script>
-const MIN = 60000;
-const DEFAULTS = {dest:"회사 (강남역)", arrive:"09:00", prep:25, walkTo:7, ride:22, walkFrom:5, headway:6, buffer:3, interval:10, delay:0, home:null};
-const store = {
-  get(){ try{ return JSON.parse(localStorage.getItem("bochae-settings")) }catch{ return null } },
-  set(v){ try{ localStorage.setItem("bochae-settings", JSON.stringify(v)) }catch{} }
+const MIN = 60000, RIDE = 2, XFER_WALK = 4;
+
+// ---- 노선 데이터 (데모: 1·2·3·4·5·7·9호선 주요 구간) ----
+// 실제 서비스에서는 서울 열린데이터광장 역 정보/시간표(OA-101)로 교체
+const LINES = {
+  "1":{c:"#0052A4",h:6,st:["청량리","제기동","신설동","동묘앞","동대문","종로5가","종로3가","종각","시청","서울역","남영","용산","노량진","대방","신길","영등포","신도림","구로"]},
+  "2":{c:"#00A84D",h:4,loop:true,st:["시청","을지로입구","을지로3가","을지로4가","동대문역사문화공원","신당","상왕십리","왕십리","한양대","뚝섬","성수","건대입구","구의","강변","잠실나루","잠실","잠실새내","종합운동장","삼성","선릉","역삼","강남","교대","서초","방배","사당","낙성대","서울대입구","봉천","신림","신대방","구로디지털단지","대림","신도림","문래","영등포구청","당산","합정","홍대입구","신촌","이대","아현","충정로"]},
+  "3":{c:"#EF7C1C",h:6,st:["구파발","연신내","불광","녹번","홍제","무악재","독립문","경복궁","안국","종로3가","을지로3가","충무로","동대입구","약수","금호","옥수","압구정","신사","잠원","고속터미널","교대","남부터미널","양재","매봉","도곡","대치","학여울","대청","일원","수서","가락시장","경찰병원","오금"]},
+  "4":{c:"#00A5DE",h:5,st:["노원","창동","쌍문","수유","미아","미아사거리","길음","성신여대입구","한성대입구","혜화","동대문","동대문역사문화공원","충무로","명동","회현","서울역","숙대입구","삼각지","신용산","이촌","동작","이수","사당"]},
+  "5":{c:"#996CAC",h:6,st:["마곡","발산","우장산","화곡","까치산","신정","목동","오목교","양평","영등포구청","영등포시장","신길","여의도","여의나루","마포","공덕","애오개","충정로","서대문","광화문","종로3가","을지로4가","동대문역사문화공원","청구","신금호","행당","왕십리","마장","답십리","장한평","군자","아차산","광나루","천호","강동","길동","굽은다리","명일","고덕","상일동"]},
+  "7":{c:"#747F00",h:6,st:["노원","중계","하계","공릉","태릉입구","먹골","중화","상봉","면목","사가정","용마산","중곡","군자","어린이대공원","건대입구","뚝섬유원지","청담","강남구청","학동","논현","반포","고속터미널","내방","이수","남성","숭실대입구","상도","장승배기","신대방삼거리","보라매","신풍","대림","남구로","가산디지털단지"]},
+  "9":{c:"#BDB092",h:6,st:["개화","김포공항","공항시장","신방화","마곡나루","양천향교","가양","증미","등촌","염창","신목동","선유도","당산","국회의사당","여의도","샛강","노량진","노들","흑석","동작","구반포","신반포","고속터미널","사평","신논현","언주","선정릉","삼성중앙","봉은사","종합운동장"]},
 };
-const saved = store.get();
-const s = Object.assign({}, DEFAULTS, saved || {});
-let configured = !!saved, simMin = 0, selOffset = 0, atHome = false, lastPhase = null;
+const STATIONS = {};
+for(const [ln, L] of Object.entries(LINES)) L.st.forEach(n => (STATIONS[n] ||= []).push(ln));
+const badge = ln => `<span class="lb" style="background:${LINES[ln].c}">${ln}</span>`;
+const badges = name => (STATIONS[name]||[]).map(badge).join(" ");
+
+// ---- 저장 ----
+const DEFAULTS = {from:"", to:"", arrive:"", prep:25, walkTo:7, walkFrom:5, buffer:3, interval:10, delay:0, home:null, recent:[]};
+const store = {
+  get(){ try{ return JSON.parse(localStorage.getItem("bochae-v3")) }catch{ return null } },
+  set(v){ try{ localStorage.setItem("bochae-v3", JSON.stringify(v)) }catch{} }
+};
+const s = Object.assign({}, DEFAULTS, store.get() || {});
+let simMin = 0, selOffset = 0, atHome = false, lastPhase = null, route = null, forceSay = false;
 const sent = new Set();
 
 const $ = id => document.getElementById(id);
@@ -155,19 +250,73 @@ const now = () => Date.now() + simMin * MIN;
 const hhmm = ms => new Date(ms).toLocaleTimeString("ko-KR",{hour:"2-digit",minute:"2-digit",hour12:false});
 const mins = ms => Math.round(ms / MIN);
 const dur = m => m >= 60 ? `${Math.floor(m/60)}시간${m%60 ? " "+m%60+"분" : ""}` : `${m}분`;
+const ready = () => !!(s.from && s.to && s.arrive && s.from !== s.to && route);
 
-// ---- 열차 시간표 (데모) ----
-// 실제 서비스에서는 서울 열린데이터광장 OA-101(시간표) + OA-12764(실시간 도착)로 교체
-function trainsBetween(fromMs, toMs){
-  const day = new Date(fromMs); day.setHours(0,0,0,0);
-  const start = day.getTime() + 2*MIN + s.delay*MIN;
-  const step = Math.max(1, s.headway) * MIN;
-  const out = [];
-  for(let t = start + Math.ceil((fromMs - start) / step) * step; t <= toMs; t += step) out.push(t);
+// ---- 경로 찾기: 환승 비용까지 포함한 최단 경로 ----
+function neighbors(ln, i){
+  const L = LINES[ln], N = L.st.length, out = [];
+  if(i+1 < N || L.loop) out.push([(i+1)%N, 1]);
+  if(i-1 >= 0 || L.loop) out.push([(i-1+N)%N, -1]);
   return out;
 }
-const nextTrain = ms => trainsBetween(ms, ms + 3*60*MIN)[0];
+function findRoute(from, to){
+  if(!STATIONS[from] || !STATIONS[to] || from === to) return null;
+  const dist = new Map(), prev = new Map(), done = new Set();
+  const key = (ln,i) => ln+"|"+i;
+  for(const ln of STATIONS[from]) dist.set(key(ln, LINES[ln].st.indexOf(from)), 0);
+  while(true){
+    let best=null, bd=Infinity;
+    for(const [k,d] of dist) if(!done.has(k) && d < bd){ best=k; bd=d; }
+    if(!best) return null;
+    done.add(best);
+    const [ln, si] = best.split("|"), i = Number(si), name = LINES[ln].st[i];
+    if(name === to){
+      const path = []; let k = best;
+      while(k){ path.unshift(k); k = prev.get(k); }
+      return toLegs(path);
+    }
+    const relax = (k, w) => { if(!done.has(k) && bd + w < (dist.get(k) ?? Infinity)){ dist.set(k, bd + w); prev.set(k, best); } };
+    for(const [j] of neighbors(ln, i)) relax(key(ln,j), RIDE);
+    for(const ol of STATIONS[name]) if(ol !== ln) relax(key(ol, LINES[ol].st.indexOf(name)), XFER_WALK + LINES[ol].h/2);
+  }
+}
+function toLegs(path){
+  const nodes = path.map(k => { const [ln,i] = k.split("|"); return {ln, i:Number(i)}; });
+  const legs = [];
+  for(let a = 0; a < nodes.length-1; a++){
+    const x = nodes[a], y = nodes[a+1];
+    if(x.ln !== y.ln) continue;
+    const N = LINES[x.ln].st.length, dir = (x.i+1)%N === y.i ? 1 : -1;
+    const last = legs[legs.length-1];
+    if(last && last.ln === x.ln && last.toI === x.i){ last.toI = y.i; last.stops++; }
+    else legs.push({ln:x.ln, dir, fromI:x.i, toI:y.i, stops:1});
+  }
+  return legs.map(l => ({...l, from:LINES[l.ln].st[l.fromI], to:LINES[l.ln].st[l.toI], toward:towardName(l)}));
+}
+function towardName(l){
+  const L = LINES[l.ln];
+  if(L.loop) return l.dir > 0 ? "내선순환" : "외선순환";
+  return (l.dir > 0 ? L.st[L.st.length-1] : L.st[0]) + " 방면";
+}
 
+// ---- 시간표 (데모) ----
+function nextTrainAt(ln, i, dir, t){
+  const L = LINES[ln], N = L.st.length, h = L.h*MIN;
+  const pos = dir > 0 ? i : N-1-i;
+  const day = new Date(t); day.setHours(0,0,0,0);
+  const first = day.getTime() + ((Number(ln)*3 + pos*RIDE + (dir>0?0:2)) % L.h)*MIN + s.delay*MIN;
+  return first + Math.ceil((t - first)/h)*h;
+}
+function simulate(leave){
+  let t = leave + s.walkTo*MIN;
+  const legs = route.map((l, k) => {
+    if(k > 0) t += XFER_WALK*MIN;
+    const ready = t, board = nextTrainAt(l.ln, l.fromI, l.dir, t);
+    t = board + l.stops*RIDE*MIN;
+    return {...l, ready, board, alight:t};
+  });
+  return {leave, legs, arrive: t + s.walkFrom*MIN};
+}
 function targetMs(){
   const [h,m] = s.arrive.split(":").map(Number);
   const d = new Date(now()); d.setHours(h,m,0,0);
@@ -175,69 +324,178 @@ function targetMs(){
   return d.getTime();
 }
 function plan(){
-  const target = targetMs();
-  const trains = trainsBetween(target - 4*60*MIN, target - (s.buffer + s.ride + s.walkFrom)*MIN);
-  const train = trains[trains.length-1];
-  const depart = train - s.walkTo*MIN;
-  return {target, train, depart, prepStart: depart - s.prep*MIN};
+  const target = targetMs(), deadline = target - s.buffer*MIN;
+  let L = Math.floor(deadline/MIN)*MIN;
+  for(let k = 0; k < 400 && simulate(L).arrive > deadline; k++) L -= MIN;
+  const sim = simulate(L);
+  return {target, leave:L, prepStart:L - s.prep*MIN, sim};
 }
-function ifLeaveAt(leave, target){
-  const train = nextTrain(leave + s.walkTo*MIN);
-  const arrive = train + (s.ride + s.walkFrom)*MIN;
-  return {train, arrive, slack: mins(target - arrive)};
-}
+const slackOf = (sim, target) => mins(target - sim.arrive);
+const xferText = () => route.length > 1 ? route.slice(1).map(l => `${l.from}에서 ${l.ln}호선`).join(", ") + " 환승" : "";
 
-// ---- 에이전트: 솔직하게, 반말로, 할 일을 말한다 ----
+// ---- 에이전트 판단: 항상 목표 기준으로, 솔직하게 ----
 function judge(p, t){
-  const toPrep = mins(p.prepStart - t), toDep = mins(p.depart - t);
-  if(t > p.target) return {phase:"over", level:"late", title:"오늘은 끝났어.", body:"내일 거 다시 볼게."};
-  if(toPrep > 10) return {phase:"free", level:"", title:"아직 안 나가도 돼.", body:`준비는 ${dur(toPrep)} 뒤에 시작해. 출발은 ${dur(toDep)} 뒤.`};
-  if(toPrep > 0) return {phase:"soon", level:"warn", title:"하던 거 슬슬 정리해.", body:`${toPrep}분 뒤에 준비 시작이야.`};
-  if(toDep > 5) return {phase:"prep", level:"warn", title:"지금 준비 시작해.", body:`지금 하면 안 뛰어도 돼. ${hhmm(p.train)} 열차야. 출발까지 ${toDep}분.`};
-  if(toDep > 0) return {phase:"shoes", level:"urgent", title:"신발 신어.", body:`${toDep}분 뒤에 나가야 ${hhmm(p.train)} 열차 걸어서 탄다.`};
-  const r = ifLeaveAt(t, p.target);
-  if(atHome) return {phase:"home", level:"late", title:"아직 집이지?", body:`지금 바로 나가. ${hhmm(r.train)} 열차 타면 ${r.slack >= 0 ? r.slack+"분 남아" : -r.slack+"분 지각이야"}.`};
-  if(r.slack >= 0) return {phase:"go", level:"urgent", title:"출발 시간 지났어.", body:`지금 나가면 아직 안 늦어. ${hhmm(r.train)} 열차, ${r.slack}분 남아. 걸음 빨리.`};
-  return {phase:"late", level:"late", title:"이미 늦었어.", body:`지금 나가도 ${-r.slack}분 지각이야. 늦는다고 지금 연락해.`};
+  if(!s.from || !s.to) return {phase:"nogoal", level:"warn", title:"목표부터 정해.", body:"어디서 타서 어디서 내리는지 위에서 골라. 그래야 늦는지 안 늦는지 말해줄 수 있어."};
+  if(s.from === s.to) return {phase:"same", level:"warn", title:"출발역이랑 도착역이 같아.", body:"하나 바꿔."};
+  if(!s.arrive) return {phase:"notime", level:"warn", title:"몇 시까지 가야 돼?", body:`${s.to}에 몇 시까지 도착해야 하는지 넣어.`};
+  const toPrep = mins(p.prepStart - t), toDep = mins(p.leave - t), first = p.sim.legs[0];
+  const xf = route.length > 1 ? ` ${xferText()}까지 쳐서 계산한 거야.` : "";
+  if(t > p.target) return {phase:"over", level:"late", title:"약속 시간 지났어.", body:"내일 목표 다시 정해."};
+  if(toPrep > 10) return {phase:"free", level:"", title:"아직 안 나가도 돼.", body:`${s.arrive}까지 ${s.to} 가려면 준비는 ${dur(toPrep)} 뒤, 집에서 나가는 건 ${dur(toDep)} 뒤야.`};
+  if(toPrep > 0) return {phase:"soon", level:"warn", title:"하던 거 슬슬 정리해.", body:`${toPrep}분 뒤에 준비 시작해야 ${s.arrive}까지 ${s.to} 도착해.`};
+  if(toDep > 5) return {phase:"prep", level:"warn", title:"지금 준비 시작해.", body:`지금 하면 안 뛰어도 돼. ${first.from} ${hhmm(first.board)} 열차 타야 돼.${xf}`};
+  if(toDep > 0) return {phase:"shoes", level:"urgent", title:"신발 신어.", body:`${toDep}분 안에 안 나가면 ${hhmm(first.board)} 열차 놓쳐.`};
+  const r = simulate(t), sl = slackOf(r, p.target);
+  if(atHome) return {phase:"home", level:"late", title:"아직 집이야?", body:`지금 바로 나가. 지금 나가도 ${sl >= 0 ? sl+"분 남아" : -sl+"분 늦어"}.`};
+  if(sl >= 0) return {phase:"go", level:"urgent", title:"나갈 시간 지났어.", body:`지금 나가면 ${s.to}에 ${hhmm(r.arrive)} 도착. ${s.arrive}보다 ${sl}분 빨라. 빨리 걸어.`};
+  return {phase:"late", level:"late", title:"너 개늦는다.", body:`지금 나가도 ${s.to}에 ${hhmm(r.arrive)} 도착. ${s.arrive}보다 ${-sl}분 늦어.${route.length>1 ? " 환승까지 치면 답 없어." : ""} 늦는다고 지금 연락해.`};
 }
 function whatIf(off){
-  const p = plan(), r = ifLeaveAt(now() + off*MIN, p.target);
+  const p = plan(), r = simulate(now() + off*MIN), sl = slackOf(r, p.target);
   const when = off === 0 ? "지금 나가면" : `${off}분 뒤에 나가면`;
-  const verdict = r.slack >= 5 ? `${dur(r.slack)} 남아. 괜찮아.`
-    : r.slack > 0 ? `${r.slack}분 남아. 빠듯해.`
-    : r.slack === 0 ? "딱 맞춰 도착. 여유 없어."
-    : `${dur(-r.slack)} 지각이야. 그러지 마.`;
-  return {level: r.slack >= 5 ? "" : r.slack >= 0 ? "warn" : "late", title: verdict, body:`${when} ${hhmm(r.train)} 열차 타고 ${hhmm(r.arrive)} 도착.`};
+  const title = sl >= 5 ? `${dur(sl)} 남아. 괜찮아.` : sl > 0 ? `${sl}분 남아. 빠듯해.` : sl === 0 ? "딱 맞춰 도착. 여유 없어." : `${dur(-sl)} 지각. 그러지 마.`;
+  return {level: sl >= 5 ? "" : sl >= 0 ? "warn" : "late", title, body:`${when} ${r.legs[0].from} ${hhmm(r.legs[0].board)} 열차 타고 ${s.to}에 ${hhmm(r.arrive)} 도착. 목표는 ${s.arrive}.`};
 }
 function delayNote(p){
-  if(s.delay <= 0) return "";
+  if(!ready() || s.delay <= 0) return "";
   const d = s.delay; s.delay = 0; const base = plan(); s.delay = d;
-  const diff = mins(base.depart - p.depart);
+  const diff = mins(base.leave - p.leave);
   return diff > 0 ? ` 열차 ${d}분 지연이라 ${diff}분 일찍 나가야 돼.` : ` 열차 ${d}분 지연인데 너한텐 상관없어.`;
 }
-function current(){ const p = plan(), m = judge(p, now()); m.body += delayNote(p); return m; }
-
+function current(){
+  const p = ready() ? plan() : null, m = judge(p, now());
+  if(p) m.body += delayNote(p);
+  return m;
+}
 function say(m, who="agent"){
   const el = document.createElement("div");
   el.className = `msg ${who} ${m.level||""}`;
-  if(who === "me"){
-    el.textContent = m;
-  } else {
+  if(who === "me"){ el.textContent = m; }
+  else {
     el.innerHTML = `<b></b><span></span><span class="time"></span>`;
     el.querySelector("b").textContent = m.title;
     el.querySelector("span").textContent = m.body;
     el.querySelector(".time").textContent = hhmm(now());
   }
   const feed = $("feed"); feed.append(el);
-  while(feed.children.length > 6) feed.firstChild.remove();
+  while(feed.children.length > 4) feed.firstChild.remove();
 }
 
-$("ask").addEventListener("click", ()=>{ say("나 지금 어때?", "me"); say(current()); });
-document.querySelectorAll("[data-what]").forEach(b=>b.addEventListener("click", ()=>{
-  const off = Number(b.dataset.what);
-  say(b.textContent, "me"); say(whatIf(off));
-  selOffset = off; $("offset").value = off; drawDial();
-}));
+// ---- 목표 카드 ----
+function renderGoal(){
+  $("goalHead").innerHTML = s.to && s.arrive
+    ? `${s.arrive}까지 ${s.to}`
+    : `<span class="empty">어디를 몇 시까지 가?</span>`;
+  const setV = (el, name, ph) => { el.classList.toggle("empty", !name); el.innerHTML = name ? `${name} ${badges(name)}` : ph; };
+  setV($("fromV"), s.from, "역 골라");
+  setV($("toV"), s.to, "역 골라");
+  $("arriveIn").value = s.arrive;
+  $("prepV").textContent = `${s.prep}분`;
+  if(!ready()){ $("goalSum").textContent = "출발역·도착역·시간만 정하면 나머지는 내가 계산해."; return; }
+  const total = route.reduce((a,l)=>a+l.stops*RIDE,0) + (route.length-1)*XFER_WALK + s.walkTo + s.walkFrom;
+  const lines = route.map(l=>l.ln+"호선").join(" → ");
+  $("goalSum").textContent = `${lines} · ${route.length>1 ? `환승 ${route.length-1}번` : "환승 없음"} · 집에서 대략 ${total}분 (대기 시간 빼고)`;
+}
+function updateRoute(){ route = findRoute(s.from, s.to); }
+function goalChanged(){
+  store.set(s); updateRoute(); forceSay = ready(); sent.clear(); selOffset = 0;
+  document.body.classList.toggle("ready", ready());
+  $("ask").disabled = false;
+  tick();
+}
+$("arriveIn").addEventListener("change", e=>{ s.arrive = e.target.value; goalChanged(); });
+$("prepMinus").addEventListener("click", ()=>{ s.prep = Math.max(0, s.prep-5); goalChanged(); });
+$("prepPlus").addEventListener("click", ()=>{ s.prep = Math.min(120, s.prep+5); goalChanged(); });
+$("swapBtn").addEventListener("click", ()=>{ [s.from, s.to] = [s.to, s.from]; goalChanged(); });
+
+// ---- 역 고르기 시트 ----
+let pickTarget = "from";
+function openPicker(which){
+  pickTarget = which;
+  $("pickerTitle").textContent = which === "from" ? "어디서 타?" : "어디서 내려?";
+  $("pickerSearch").value = ""; renderPicker(); $("picker").showModal(); $("pickerSearch").focus();
+}
+function renderPicker(){
+  const q = $("pickerSearch").value.trim().replace(/역$/,"");
+  const all = Object.keys(STATIONS).sort((a,b)=>a.localeCompare(b,"ko"));
+  const hits = q ? all.filter(n => n.includes(q)) : all;
+  const recent = q ? [] : s.recent.filter(n => STATIONS[n]);
+  const item = n => `<li><button type="button" data-st="${n}">${n} ${badges(n)}</button></li>`;
+  $("pickerList").innerHTML =
+    (recent.length ? `<li class="sec">최근</li>${recent.map(item).join("")}<li class="sec">전체</li>` : "") +
+    (hits.length ? hits.map(item).join("") : `<li class="sec">그런 역 없어. 데모라 1·2·3·4·5·7·9호선 주요 역만 있어.</li>`);
+}
+$("pickerSearch").addEventListener("input", renderPicker);
+$("pickerList").addEventListener("click", e=>{
+  const b = e.target.closest("[data-st]"); if(!b) return;
+  const n = b.dataset.st;
+  s[pickTarget] = n;
+  s.recent = [n, ...s.recent.filter(x=>x!==n)].slice(0,5);
+  $("picker").close(); goalChanged();
+});
+$("pickerClose").addEventListener("click", ()=>$("picker").close());
+$("fromBtn").addEventListener("click", ()=>openPicker("from"));
+$("toBtn").addEventListener("click", ()=>openPicker("to"));
+
+// ---- 경로 타임라인 ----
+function renderRoute(p){
+  const past = now() > p.leave, sim = past ? simulate(Math.ceil(now()/MIN)*MIN) : p.sim, sl = slackOf(sim, p.target);
+  const rows = [];
+  const li = (t, what, sub, dotc, seg, cls="") =>
+    `<li class="${cls}"><span class="t">${t}</span><span class="rail" style="--seg:${seg};--dotc:${dotc}"><span class="dot"></span></span><span class="what">${what}${sub?`<small>${sub}</small>`:""}</span></li>`;
+  if(!past) rows.push(li(hhmm(p.prepStart), "준비 시작", `${s.prep}분`, "var(--prep)", "var(--prep)"));
+  rows.push(li(hhmm(sim.leave), past ? "지금 나가면" : "집에서 나가기", `${sim.legs[0].from}역까지 걸어서 ${s.walkTo}분`, "var(--ink)", "var(--line)"));
+  sim.legs.forEach((l, k) => {
+    if(k > 0) rows.push(li(hhmm(l.ready), `${l.from}에서 ${l.ln}호선으로 갈아타기`, `걷는 데 ${XFER_WALK}분 + 기다리는 데 ${mins(l.board - l.ready)}분`, "var(--late)", "var(--line)", "xfer"));
+    rows.push(li(hhmm(l.board), `${l.from} ${badge(l.ln)} 탑승`, `${l.toward} · ${l.stops}정거장 · ${l.stops*RIDE}분`, LINES[l.ln].c, LINES[l.ln].c));
+    rows.push(li(hhmm(l.alight), `${l.to} 하차`, "", LINES[l.ln].c, "var(--line)"));
+  });
+  const color = sl >= 0 ? "var(--ok)" : "var(--late)";
+  rows.push(li(hhmm(sim.arrive), `<span class="verdict" style="color:${color}">${s.to} 도착 · ${sl >= 0 ? sl+"분 여유" : -sl+"분 지각"}</span>`, `목표 ${s.arrive} · 도보 ${s.walkFrom}분 포함`, color, "transparent"));
+  $("route").innerHTML = rows.join("");
+  $("routeHint").textContent = past
+    ? `원래 ${hhmm(p.leave)}에 나갔어야 했어. 지금 나가면 이렇게 돼.`
+    : `${hhmm(sim.leave)}에 나가면 ${s.arrive}까지 맞아. 여유 ${s.buffer}분 포함.`;
+}
+
+// ---- 실시간 열차 띠 ----
+function renderStrip(p){
+  const t = now(), leg = (t > p.leave ? simulate(t) : p.sim).legs[0], L = LINES[leg.ln], N = L.st.length;
+  const back = [];
+  for(let k = 6; k >= 0; k--){
+    const idx = leg.fromI - leg.dir*k;
+    if(L.loop || (idx >= 0 && idx < N)) back.push({k, name:L.st[(idx+N)%N]});
+  }
+  const x0 = 24, x1 = 300, gap = (x1-x0)/6, xOf = k => x1 - k*gap, y = 56;
+  let svg = `<line x1="${xOf(back[0].k)}" y1="${y}" x2="${x1+20}" y2="${y}" stroke="${L.c}" stroke-width="6" stroke-linecap="round"/>`;
+  svg += `<text x="${x1+26}" y="${y+4}" font-size="16" fill="${L.c}">›</text>`;
+  for(const b of back){
+    const me = b.k === 0;
+    svg += `<circle cx="${xOf(b.k)}" cy="${y}" r="${me?8:5}" fill="var(--card)" stroke="${L.c}" stroke-width="3"/>`;
+    svg += `<text x="${xOf(b.k)}" y="${y+28}" text-anchor="middle" font-size="${me?12:10}" font-weight="${me?700:400}" fill="${me?"var(--ink)":"var(--muted)"}">${b.name.length>5?b.name.slice(0,4)+"…":b.name}</text>`;
+  }
+  const catchFrom = Math.max(t, p.leave) + s.walkTo*MIN;
+  let mineShown = false;
+  let tr = nextTrainAt(leg.ln, leg.fromI, leg.dir, t);
+  for(let j = 0; j < 4; j++, tr += L.h*MIN){
+    const m = (tr - t)/MIN, k = m / RIDE;
+    if(k > back[0].k + 0.3) break;
+    const x = xOf(k), mine = tr === leg.board, can = tr >= catchFrom;
+    if(mine) mineShown = true;
+    const label = mine ? "이거 타" : can ? `${Math.ceil(m)}분` : "못 타";
+    const fill = mine ? L.c : can ? "var(--ink)" : "var(--muted)";
+    svg += `<rect x="${x-13}" y="${y-9}" width="26" height="18" rx="6" fill="${fill}" opacity="${can||mine?1:.45}"/>`;
+    svg += `<text x="${x}" y="${y-16}" text-anchor="middle" font-size="11" font-weight="700" fill="${mine?L.c:"var(--muted)"}">${label}</text>`;
+  }
+  const myWait = Math.ceil((leg.board - t)/MIN);
+  svg += `<text x="12" y="112" font-size="12.5" fill="var(--ink)" font-weight="700">${mineShown
+    ? "\"이거 타\" 열차가 네 거야. 놓치지 마."
+    : t > p.leave ? `지금 나가면 ${hhmm(leg.board)} 열차 (${myWait}분 뒤).`
+    : `네 열차는 ${hhmm(leg.board)} (${myWait}분 뒤). 아직 저 멀리 있어.`}</text>`;
+  $("strip").innerHTML = svg;
+  const nxt = nextTrainAt(leg.ln, leg.fromI, leg.dir, t);
+  $("liveTitle").innerHTML = `${leg.from} ${badge(leg.ln)} ${leg.toward} · 다음 열차 ${Math.max(0, Math.ceil((nxt-t)/MIN))}분 뒤`;
+}
 
 // ---- 다이얼 ----
 const CX=150, CY=150, R=104;
@@ -247,14 +505,14 @@ function arc(d0, d1){
   const [x0,y0]=polar(d0),[x1,y1]=polar(d1);
   return `M${x0} ${y0} A${R} ${R} 0 ${d1-d0>180?1:0} 1 ${x1} ${y1}`;
 }
-function drawDial(){
-  const t = now(), p = plan();
+function drawDial(p){
+  const t = now();
   const W = Math.max(15, Math.min(180, Math.ceil((p.target - t)/MIN)));
   const deg = ms => (ms - t)/MIN / W * 360;
   $("offset").max = W;
-  const r = ifLeaveAt(t + selOffset*MIN, p.target);
-  const color = r.slack >= 5 ? "var(--ok)" : r.slack >= 0 ? "var(--prep)" : "var(--late)";
-  const res = r.slack >= 0 ? `${dur(r.slack)} 남음` : `${dur(-r.slack)} 지각`;
+  const r = simulate(t + selOffset*MIN), sl = slackOf(r, p.target);
+  const color = sl >= 5 ? "var(--ok)" : sl >= 0 ? "var(--prep)" : "var(--late)";
+  const res = sl >= 0 ? `${s.arrive} 목표에 ${dur(sl)} 남음` : `${s.arrive} 목표에 ${dur(-sl)} 지각`;
   const [kx,ky] = polar(selOffset / W * 360);
   const ticks = [0,.25,.5,.75].map(f=>{
     const [x,y]=polar(f*360, R+24);
@@ -263,42 +521,54 @@ function drawDial(){
   $("dial").innerHTML = `
     <circle cx="${CX}" cy="${CY}" r="${R}" fill="none" stroke="var(--line)" stroke-width="18"/>
     <path d="${arc(0, deg(p.prepStart))}" stroke="var(--free)" stroke-width="18" fill="none"/>
-    <path d="${arc(deg(p.prepStart), deg(p.depart))}" stroke="var(--prep)" stroke-width="18" fill="none"/>
-    <path d="${arc(deg(p.depart), deg(p.target))}" stroke="var(--travel)" stroke-width="18" fill="none"/>
+    <path d="${arc(deg(p.prepStart), deg(p.leave))}" stroke="var(--prep)" stroke-width="18" fill="none"/>
+    <path d="${arc(deg(p.leave), deg(p.target))}" stroke="var(--travel)" stroke-width="18" fill="none"/>
     ${ticks}
     <circle cx="${kx}" cy="${ky}" r="14" fill="var(--card)" stroke="var(--ink)" stroke-width="3"/>
     <text x="${CX}" y="${CY-20}" text-anchor="middle" class="center-big">${selOffset===0?"지금 나가면":selOffset+"분 뒤에 나가면"}</text>
-    <text x="${CX}" y="${CY+4}" text-anchor="middle" class="center-sm">${hhmm(r.train)} 열차 · ${hhmm(r.arrive)} 도착</text>
+    <text x="${CX}" y="${CY+4}" text-anchor="middle" class="center-sm">${hhmm(r.legs[0].board)} 열차 · ${hhmm(r.arrive)} 도착</text>
     <text x="${CX}" y="${CY+30}" text-anchor="middle" class="center-res" fill="${color}">${res}</text>`;
 }
 function setOffsetFromPointer(e){
   const box = $("dial").getBoundingClientRect();
   const x = (e.clientX - box.left)/box.width*300 - CX, y = (e.clientY - box.top)/box.height*300 - CY;
   let deg = Math.atan2(y, x)*180/Math.PI + 90; if(deg<0) deg+=360;
-  selOffset = Math.round(deg/360*Number($("offset").max)); $("offset").value = selOffset; drawDial();
+  selOffset = Math.round(deg/360*Number($("offset").max)); $("offset").value = selOffset; drawDial(plan());
 }
 let dragging=false;
 $("dial").addEventListener("pointerdown", e=>{dragging=true; $("dial").setPointerCapture(e.pointerId); setOffsetFromPointer(e);});
 $("dial").addEventListener("pointermove", e=>{ if(dragging) setOffsetFromPointer(e); });
 $("dial").addEventListener("pointerup", ()=>dragging=false);
-$("offset").addEventListener("input", e=>{ selOffset = Number(e.target.value); drawDial(); });
+$("offset").addEventListener("input", e=>{ selOffset = Number(e.target.value); drawDial(plan()); });
 
-// ---- 에이전트가 먼저 말 건다: 상태가 바뀔 때 + 정해둔 간격마다 ----
+// ---- 버튼 ----
+$("ask").addEventListener("click", ()=>{ say("나 지금 어때?", "me"); say(current()); });
+document.querySelectorAll("[data-what]").forEach(b=>b.addEventListener("click", ()=>{
+  if(!ready()) return;
+  const off = Number(b.dataset.what);
+  say(b.textContent, "me"); say(whatIf(off));
+  selOffset = off; $("offset").value = off; drawDial(plan());
+}));
+
+// ---- 에이전트가 먼저 말 건다 ----
 function notify(m){
   if(!("Notification" in window) || Notification.permission!=="granted") return;
   try{ new Notification(m.title, {body:m.body, tag:"bochae"}); }catch{}
 }
 function tick(){
-  const t = now(), p = plan(), m = current();
+  const t = now();
   $("clock").textContent = hhmm(t);
-  $("trip").textContent = `${s.dest} · ${s.arrive}까지`;
-  drawDial();
-  if(!configured) return;
-  if(m.phase !== lastPhase){ lastPhase = m.phase; say(m); notify(m); return; }
-  for(let mark = p.prepStart - 30*MIN; mark < p.depart; mark += s.interval*MIN){
-    const id = p.depart+":"+mark;
-    if(t >= mark && t - mark < 2*MIN && !sent.has(id)){ sent.add(id); say(m); notify(m); }
+  renderGoal();
+  const m = current();
+  if(ready()){
+    const p = plan();
+    renderRoute(p); renderStrip(p); drawDial(p);
+    for(let mark = p.prepStart - 30*MIN; mark < p.leave; mark += s.interval*MIN){
+      const id = p.leave+":"+mark;
+      if(m.phase === lastPhase && t >= mark && t - mark < 2*MIN && !sent.has(id)){ sent.add(id); say(m); notify(m); }
+    }
   }
+  if(m.phase !== lastPhase || forceSay){ lastPhase = m.phase; forceSay = false; say(m); if(ready()) notify(m); }
 }
 
 // ---- GPS ----
@@ -329,28 +599,18 @@ $("notifyBtn").addEventListener("click", async ()=>{
   $("notifyBtn").textContent = r==="granted" ? "알림 켜짐" : "알림 꺼짐";
 });
 
-// ---- 설정: 한 번 저장하면 계속 그대로 ----
-const form = $("form");
-function fillForm(){ for(const k of Object.keys(DEFAULTS)) if(form.elements[k]) form.elements[k].value = s[k]; }
-$("openSettings").addEventListener("click", ()=>{ fillForm(); $("settings").showModal(); });
+// ---- 설정 ----
+const form = $("form"), SET_KEYS = ["walkTo","walkFrom","buffer","interval","delay"];
+$("openSettings").addEventListener("click", ()=>{ for(const k of SET_KEYS) form.elements[k].value = s[k]; $("settings").showModal(); });
 $("sim").addEventListener("input", e=>{ simMin = Number(e.target.value); });
 form.addEventListener("submit", ()=>{
-  for(const k of Object.keys(DEFAULTS)){
-    const el = form.elements[k]; if(!el) continue;
-    s[k] = el.type==="number" || k==="interval" ? Math.max(0, Number(el.value)||0) : el.value;
-  }
-  store.set(s); configured = true; lastPhase = null; sent.clear();
-  say({level:"", title:"알았어.", body:`${s.dest}, ${s.arrive}까지. 이대로 기억할게.`});
-  tick();
+  for(const k of SET_KEYS) s[k] = Math.max(0, Number(form.elements[k].value)||0);
+  goalChanged();
 });
 
 if(s.home) watchHome();
-if(!saved){
-  say({level:"", title:"어디 가?", body:"목적지랑 몇 시까지인지만 알려줘. 그다음부터는 내가 알아서 보챌게."});
-  fillForm(); $("settings").showModal();
-}
-tick();
-setInterval(tick, 15000);
+goalChanged();
+setInterval(tick, 5000);
 </script>
 </body>
 </html>
