@@ -296,17 +296,20 @@ function demoNet(){
 }
 
 // ---- 그래프 ----
-let NET, ADJ, BYNAME;
+// n: API 이름(실시간 조회용), d: 화면·환승용 이름(같은 역을 노선마다 다르게 부르는 걸 하나로)
+let NET, ADJ, BYNAME, ALSO;
 function prepare(net){
-  NET = net; ADJ = new Map(); BYNAME = new Map();
+  NET = net; ADJ = new Map(); BYNAME = new Map(); ALSO = new Map();
   for(const [id, nd] of Object.entries(net.nodes)){
+    const d = nd.d || nd.n;
     ADJ.set(id, []);
-    if(!BYNAME.has(nd.n)) BYNAME.set(nd.n, []);
-    BYNAME.get(nd.n).push(id);
+    if(!BYNAME.has(d)){ BYNAME.set(d, []); ALSO.set(d, new Set()); }
+    BYNAME.get(d).push(id);
+    if(nd.n !== d) ALSO.get(d).add(nd.n);
   }
   for(const [a,b] of net.edges) if(ADJ.has(a) && ADJ.has(b)){ ADJ.get(a).push(b); ADJ.get(b).push(a); }
 }
-const lineOf = id => NET.nodes[id].l, nameOf = id => NET.nodes[id].n;
+const lineOf = id => NET.nodes[id].l, nameOf = id => NET.nodes[id].d || NET.nodes[id].n, apiName = id => NET.nodes[id].n;
 const meta = l => LINE_META[l] || (NET.lines && NET.lines[l]) || {name:l, short:"?", c:"#888", ride:2, h:8};
 const badge = l => `<span class="lb" style="background:${meta(l).c}">${meta(l).short}</span>`;
 const linesAt = name => [...new Set((BYNAME.get(name)||[]).map(lineOf))].sort();
@@ -374,10 +377,10 @@ function modelNext(leg, t){
   return first + Math.ceil((t - first)/h)*h;
 }
 function liveTrains(leg){
-  if(!isLive() || !live || live.station !== leg.from) return [];
+  if(!isLive() || !live || live.station !== apiName(leg.ids[0])) return [];
   const ride = meta(leg.l).ride, seen = new Set(), out = [];
   // 종착역이 내릴 역보다 앞이면(예: 신도림행인데 교대까지 가야 함) 그 열차는 못 탐
-  const before = new Set([leg.from, ...leg.ids.slice(1, -1).map(nameOf)]);
+  const before = new Set(leg.ids.slice(0, -1).map(apiName));
   for(const r of live.rows){
     if(r.subwayId !== leg.l || r.statnTid !== leg.next || seen.has(r.btrainNo)) continue;
     seen.add(r.btrainNo);
@@ -498,7 +501,7 @@ function openPicker(which){
 function renderPicker(){
   const q = $("pickerSearch").value.trim().replace(/역$/,"");
   const all = [...BYNAME.keys()].sort((a,b)=>a.localeCompare(b,"ko"));
-  const hits = q ? all.filter(n => n.includes(q)).sort((a,b)=>(b.startsWith(q))-(a.startsWith(q))) : all;
+  const hits = q ? all.filter(n => n.includes(q) || [...ALSO.get(n)].some(a => a.includes(q))).sort((a,b)=>(b.startsWith(q))-(a.startsWith(q))) : all;
   const recent = q ? [] : s.recent.filter(n => BYNAME.has(n));
   const item = n => `<li><button type="button" data-st="${n}">${n} ${badges(n)}</button></li>`;
   $("pickerList").innerHTML =
@@ -671,7 +674,7 @@ function renderLive(p){
 // ---- 실시간 불러오기 (호출 한도 아끼려고 출발 90분 전부터만 30초마다) ----
 async function fetchLive(){
   if(!isLive() || !ready()) return;
-  const st = route[0].from;
+  const st = apiName(route[0].ids[0]);
   try{
     const r = await fetch(`/api/arrivals?station=${encodeURIComponent(st)}`);
     const j = await r.json();

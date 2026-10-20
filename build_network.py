@@ -32,7 +32,27 @@ CACHE = os.path.join(ROOT, "data", "crawl_cache.json")
 
 # 역별 탐색 출발점: 노선마다 한 역씩 (하나가 실패해도 환승으로 이어짐)
 SEEDS = ["서울", "시청", "교대", "사당", "광화문", "합정", "건대입구", "잠실", "고속터미널",
-         "공덕", "김포공항", "상봉", "선릉", "강남", "성신여대입구", "소사", "판교", "보라매", "수서"]
+         "공덕", "김포공항", "상봉", "선릉", "강남", "성신여대입구", "소사", "판교", "보라매", "수서",
+         # 짧은 지선·연장 구간: 직접 물어봐야 놓치지 않음
+         "광명", "서동탄", "진접", "오남", "별내별가람", "임진강", "운천", "마천", "하남검단산", "신창", "연천"]
+
+# 그 시각에 열차가 안 다녀서 API 응답에 안 나온 역을 실제 노선도대로 채움.
+# 노선별로 [이미 있는 역, 새 역, 새 역, ...] 순서로 이어짐. 낮에 다시 빌드하면 실제 API 값으로 바뀜.
+SUPPLEMENT = {
+    "1001": [["금천구청", "광명"], ["병점", "서동탄"]],
+    "1004": [["불암산", "별내별가람", "오남", "진접"]],
+    "1063": [["운천", "임진강"]],
+}
+
+# 같은 역인데 노선마다 이름이 다른 경우 → 환승이 이어지게 하나로
+ALIASES = {"서울": "서울역", "응암순환(상선)": "응암", "신촌(경의중앙선)": "신촌(경의중앙)"}
+
+
+def display_name(api_name):
+    """화면·환승용 이름. '총신대입구(이수)' → '총신대입구', '서울' → '서울역'."""
+    if api_name in ALIASES:
+        return ALIASES[api_name]
+    return re.sub(r"\s*\(.*\)$", "", api_name).strip() or api_name
 
 
 class ApiError(Exception):
@@ -88,7 +108,8 @@ def crawl(key, budget):
                 print(f"  {name}: 건너뜀 ({e})")
                 rows = []
             calls += 1
-            cache[name] = rows
+            if rows:  # 빈 응답(그 시각 운행 없음)은 저장 안 함 → 다음 실행 때 다시 물어봄
+                cache[name] = rows
             if calls % 50 == 0:
                 print(f"  {calls}번 호출, 역 {len(seen)}개 확인")
                 save_cache(cache)
@@ -188,6 +209,33 @@ def main():
     for sid, name in hints.items():
         if sid not in nodes:
             nodes[sid] = {"n": name, "l": sid[:4]}
+
+    # API에 안 나온 지선·연장 구간 채우기 (x: 추정값 표시)
+    filled, serial = [], 0
+    for line, chains in SUPPLEMENT.items():
+        on_line = {display_name(nd["n"]): sid for sid, nd in nodes.items() if nd["l"] == line}
+        for chain in chains:
+            prev = on_line.get(display_name(chain[0]))
+            if not prev:
+                print(f"  ⚠ 보충 실패: {LINE_META[line]['name']}에 {chain[0]} 없음")
+                continue
+            for name in chain[1:]:
+                cur = on_line.get(display_name(name))
+                if not cur:
+                    serial += 1
+                    cur = f"{line}9{serial:05d}"
+                    nodes[cur] = {"n": name, "l": line, "x": 1}
+                    on_line[name] = cur
+                    filled.append(f"{LINE_META[line]['name']} {name}")
+                edges.add(tuple(sorted((prev, cur))))
+                prev = cur
+    if filled:
+        print(f"노선도로 채운 역 {len(filled)}개 (지금 운행이 없어서): {', '.join(filled)}")
+
+    for nd in nodes.values():
+        d = display_name(nd["n"])
+        if d != nd["n"]:
+            nd["d"] = d
 
     unnamed = {x for e in edges for x in e} - nodes.keys()
     edges = sorted(e for e in edges if e[0] in nodes and e[1] in nodes)
