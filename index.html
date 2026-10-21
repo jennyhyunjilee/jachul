@@ -449,8 +449,15 @@ function targetMs(){
 }
 function plan(){
   const target = targetMs(), deadline = target - s.buffer*MIN;
+  // 늦게 나가는 쪽부터 1분씩 당겨 보며 시간 안에 도착하는 마지막 출발 시각을 찾음.
+  // 지금보다 3시간 넘게 과거까지는 안 봄 → 거기까지 없으면 이미 못 맞추는 상황(infeasible)
+  const floor = Math.max(deadline - 12*60*MIN, now() - 3*60*MIN);
   let L = Math.floor(deadline/MIN)*MIN;
-  for(let k = 0; k < 600 && simulate(L).arrive > deadline; k++) L -= MIN;
+  while(L >= floor && simulate(L).arrive > deadline) L -= MIN;
+  if(L < floor){
+    L = Math.ceil(now()/MIN)*MIN;
+    return {target, leave:L, prepStart:L - s.prep*MIN, sim:simulate(L), infeasible:true};
+  }
   return {target, leave:L, prepStart:L - s.prep*MIN, sim:simulate(L)};
 }
 const slackOf = (sim, target) => mins(target - sim.arrive);
@@ -473,10 +480,10 @@ function judge(p, t){
   // 목표보다 한참 일찍 도착하는 계획이면 막차 때문
   const early = slackOf(p.sim, p.target) > 45 && simulate(p.leave + 15*MIN).cut ? " 막차 때문에 일찍 나가야 돼." : "";
   if(t > p.target) return {phase:"over", level:"late", title:"약속 시간 지났어.", body:"내일 목표 다시 정해."};
-  if(toPrep > 10) return {phase:"free", level:"", title:"아직 안 나가도 돼.", body:`${s.arrive}까지 ${s.to} 가려면 준비는 ${dur(toPrep)} 뒤, 집에서 나가는 건 ${dur(toDep)} 뒤야.${early}${lastTxt}`};
-  if(toPrep > 0) return {phase:"soon", level:"warn", title:"하던 거 슬슬 정리해.", body:`${toPrep}분 뒤에 준비 시작해야 ${s.arrive}까지 ${s.to} 도착해.${early}${lastTxt}`};
-  if(toDep > 5) return {phase:"prep", level:lastTxt ? "urgent" : "warn", title:"지금 준비 시작해.", body:`지금 하면 안 뛰어도 돼. ${first.from} ${hhmm(first.board)} 열차${src} 타야 돼.${xf}${early}${lastTxt}`};
-  if(toDep > 0) return {phase:"shoes", level:"urgent", title:"신발 신어.", body:`${toDep}분 안에 안 나가면 ${first.from} ${hhmm(first.board)} 열차${src} 놓쳐.${lastTxt}`};
+  if(!p.infeasible && toPrep > 10) return {phase:"free", level:"", title:"아직 안 나가도 돼.", body:`${s.arrive}까지 ${s.to} 가려면 준비는 ${dur(toPrep)} 뒤, 집에서 나가는 건 ${dur(toDep)} 뒤야.${early}${lastTxt}`};
+  if(!p.infeasible && toPrep > 0) return {phase:"soon", level:"warn", title:"하던 거 슬슬 정리해.", body:`${toPrep}분 뒤에 준비 시작해야 ${s.arrive}까지 ${s.to} 도착해.${early}${lastTxt}`};
+  if(!p.infeasible && toDep > 5) return {phase:"prep", level:lastTxt ? "urgent" : "warn", title:"지금 준비 시작해.", body:`지금 하면 안 뛰어도 돼. ${first.from} ${hhmm(first.board)} 열차${src} 타야 돼.${xf}${early}${lastTxt}`};
+  if(!p.infeasible && toDep > 0) return {phase:"shoes", level:"urgent", title:"신발 신어.", body:`${toDep}분 안에 안 나가면 ${first.from} ${hhmm(first.board)} 열차${src} 놓쳐.${lastTxt}`};
   const r = simulate(t), sl = slackOf(r, p.target);
   if(r.cut && sl < 0) return {phase:"cut", level:"late", title:"막차 끊겼어.",
     body:`지금 나가도 ${r.cut.from} ${meta(r.cut.l).name}은 첫차 ${when(r.cut.board)}까지 없어. 지하철로는 ${s.to}에 ${when(r.arrive)} 도착이야. 택시 타.`};
@@ -648,7 +655,9 @@ function renderRoute(p){
   const color = sl >= 0 ? "var(--ok)" : "var(--late)";
   rows.push(li(hhmm(sim.arrive), `<span class="verdict" style="color:${color}">${s.to} 도착 · ${sl >= 0 ? sl+"분 여유" : -sl+"분 지각"}</span>`, `목표 ${s.arrive} · 도보 ${s.walkFrom}분 포함`, color, "transparent"));
   $("route").innerHTML = rows.join("");
-  $("routeHint").textContent = past
+  $("routeHint").textContent = p.infeasible
+    ? `지금 바로 나가도 ${s.arrive}까지는 못 가. 제일 빨리 가면 이렇게 돼.`
+    : past
     ? `원래 ${hhmm(p.leave)}에 나갔어야 했어. 지금 나가면 이렇게 돼.`
     : `${hhmm(sim.leave)}에 나가면 ${s.arrive}까지 맞아. 여유 ${s.buffer}분 포함.`;
 }
@@ -710,22 +719,32 @@ function renderLive(p){
     }
   });
   const lv = liveTrains(leg);
-  const trains = lv.length ? lv : [0,1,2,3].map(j => ({at: modelNext(leg, t) + j*m.h*MIN}));
-  const catchFrom = Math.max(t, p.leave) + s.walkTo*MIN;
-  let mineShown = false;
-  const list = [], chars = [];
-  for(const tr of trains.slice(0, 4)){
-    const mm = (tr.at - t)/MIN, k = mm / m.ride, mine = !tr.short && tr.at === leg.board, can = !tr.short && tr.at >= catchFrom;
-    if(mine) mineShown = k <= stations.length - 0.7;
-    if(k <= stations.length - 0.7){
-      const mood = mine ? "mine" : can ? "can" : "gone";
-      const bubble = mine ? "나 타!" : can ? `${Math.max(1, Math.ceil(mm))}분` : tr.short ? "거기 안 가" : "바이~";
-      chars.push([mood, trainChar(xOf(Math.max(0, k)), y, m.c, mood, bubble)]);
-    }
-    list.push(`<li class="${mine?"mine":can?"":"gone"}"><span class="eta">${mm < 0.5 ? "곧" : Math.ceil(mm)+"분"}</span><span>${hhmm(tr.at)}${tr.dest ? ` · ${tr.dest}행` : ""}${tr.express ? " · 급행" : ""}${tr.last ? " · 막차" : ""}${tr.msg ? ` · ${tr.msg}` : ""}${mine ? " ← 이거 타" : can ? "" : tr.short ? ` (${tr.dest}까지만 가. ${leg.to} 안 가)` : " (못 타)"}</span></li>`);
+  // 실시간 열차 + 그 뒤는 배차 간격으로 이어서, 내 열차가 나올 때까지 (최대 8대)
+  const trains = lv.slice();
+  for(let tt = trains.length ? trains[trains.length-1].at + 1000 : t; trains.length < 8; ){
+    const last = trains[trains.length-1];
+    if(trains.length >= 3 && last && last.at >= leg.board) break;
+    const at = nextTrain(leg, tt, true);
+    trains.push({at, guess: !lv.some(x => x.at === at)});
+    tt = at + 1000;
   }
-  // 내 열차가 맨 위에 그려지게
-  svg += chars.sort((a,b) => (a[0]==="mine") - (b[0]==="mine")).map(c => c[1]).join("");
+  const catchFrom = Math.max(t, p.leave) + s.walkTo*MIN;
+  const info = trains.map(tr => {
+    const mm = (tr.at - t)/MIN, k = mm / m.ride, mine = !tr.short && tr.at === leg.board, can = !tr.short && tr.at >= catchFrom;
+    return {tr, mm, k, mine, can, x: xOf(Math.max(0, k)), mood: mine ? "mine" : can ? "can" : "gone"};
+  });
+  const mineShown = info.some(i => i.mine && i.k <= stations.length - 0.7);
+  // 캐릭터: 중요한 순서(내 열차 → 탈 수 있는 열차 → 못 타는 열차)로 놓고, 이미 놓인 애랑 겹치면 뺌. 목록엔 다 나옴
+  const placed = [], chars = [];
+  for(const i of info.filter(i => i.k <= stations.length - 0.7).sort((a,b) => ["mine","can","gone"].indexOf(a.mood) - ["mine","can","gone"].indexOf(b.mood))){
+    if(placed.some(px => Math.abs(px - i.x) < 60)) continue;
+    placed.push(i.x);
+    const bubble = i.mine ? "나 타!" : i.can ? `${Math.max(1, Math.ceil(i.mm))}분` : i.tr.short ? "거기 안 가" : "바이~";
+    chars.unshift(trainChar(i.x, y, m.c, i.mood, bubble)); // 내 열차를 마지막에 그려서 맨 위에
+  }
+  svg += chars.join("");
+  const list = info.map(({tr, mm, mine, can}) =>
+    `<li class="${mine?"mine":can?"":"gone"}"><span class="eta">${mm < 0.5 ? "곧" : dur(Math.ceil(mm))}</span><span>${when(tr.at)}${tr.guess ? " (추정)" : ""}${tr.dest ? ` · ${tr.dest}행` : ""}${tr.express ? " · 급행" : ""}${tr.last ? " · 막차" : ""}${tr.msg ? ` · ${tr.msg}` : ""}${mine ? " ← 이거 타" : can ? "" : tr.short ? ` (${tr.dest}까지만 가. ${leg.to} 안 가)` : " (못 타)"}</span></li>`);
   const myWait = Math.ceil((leg.board - t)/MIN);
   svg += `<text x="4" y="172" font-size="12.5" fill="var(--ink)" font-weight="700">${mineShown
     ? "\"나 타!\" 하는 애가 네 열차야. 놓치지 마."
