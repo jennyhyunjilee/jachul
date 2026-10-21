@@ -169,6 +169,7 @@ def main():
     ap.add_argument("--budget", type=int, default=800, help="역별 탐색에서 이번 실행 최대 호출 수")
     ap.add_argument("--crawl", action="store_true", help="일괄을 건너뛰고 바로 역별 탐색")
     ap.add_argument("--out", default=os.path.join(ROOT, "data", "network.json"))
+    ap.add_argument("--no-embed", action="store_true", help="index.html 에 노선도 넣지 않기")
     args = ap.parse_args()
 
     load_env(ROOT)
@@ -256,16 +257,34 @@ def main():
         print(f"  {LINE_META[line]['name']:<6} {len(ids):>3}역{warn}")
 
     os.makedirs(os.path.dirname(args.out), exist_ok=True)
+    text = json.dumps({
+        "source": source,
+        "builtAt": time.strftime("%Y-%m-%d %H:%M"),
+        "partial": bool(stopped),
+        "lines": {l: LINE_META[l] for l in sorted(by_line)},
+        "nodes": nodes,
+        "edges": edges,
+    }, ensure_ascii=False, separators=(",", ":"))
     with open(args.out, "w", encoding="utf-8") as f:
-        json.dump({
-            "source": source,
-            "builtAt": time.strftime("%Y-%m-%d %H:%M"),
-            "partial": bool(stopped),
-            "lines": {l: LINE_META[l] for l in sorted(by_line)},
-            "nodes": nodes,
-            "edges": edges,
-        }, f, ensure_ascii=False, separators=(",", ":"))
+        f.write(text)
     print(f"\n저장: {args.out}" + ("  (아직 일부만 — 다시 실행하면 이어서 채움)" if stopped else ""))
+    if not args.no_embed:
+        embed_snapshot(text)
+
+
+def embed_snapshot(text):
+    """index.html 안에도 노선도를 넣어 둠 → index.html 파일 하나만 올려도 전체 노선으로 동작."""
+    path = os.path.join(ROOT, "index.html")
+    with open(path, encoding="utf-8") as f:
+        html = f.read()
+    pat = re.compile(r'(<script type="application/json" id="netSnapshot">).*?(</script>)', re.S)
+    if not pat.search(html):
+        print("  ⚠ index.html 에 netSnapshot 자리가 없어서 못 넣음")
+        return
+    html = pat.sub(lambda m: m.group(1) + text.replace("</", "<\\/") + m.group(2), html, count=1)
+    with open(path, "w", encoding="utf-8") as f:
+        f.write(html)
+    print(f"index.html 에도 넣음 ({len(text) // 1024}KB)")
 
 
 if __name__ == "__main__":
