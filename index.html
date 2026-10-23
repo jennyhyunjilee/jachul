@@ -108,16 +108,25 @@ body:not(.ready) .card.preview > :not(h2):not(.ghost){display:none !important}
 .example{margin-top:10px;background:var(--accent);color:var(--accentInk);border-color:var(--accent);box-shadow:none;font-size:14px;padding:6px 12px}
 
 /* 다이얼 */
-/* 돌려봐: 카드 폭을 꽉 채우는 열차 얼굴 */
-.facecard{overflow:hidden}
-svg.bigface{display:block;width:calc(100% + 36px);height:auto;margin:4px -18px 0}
-.face-text{font-weight:900;fill:#fff;paint-order:stroke;stroke:#111;stroke-width:.3px;stroke-linejoin:round}
-.facecap{text-align:center;font-size:14px;font-weight:700;margin:6px 0 16px}
-/* 가로 타임라인: 원보다 보기 쉽고 손가락으로 끌기 쉬움 */
-input.timeline{-webkit-appearance:none;appearance:none;display:block;width:100%;height:20px;margin:0;border:2px solid var(--line);border-radius:12px;cursor:pointer}
+.dialwrap{display:flex;flex-direction:column;align-items:center}
+.dialwrap h2,.dialwrap .hint{align-self:flex-start}
+svg.dial{width:100%;max-width:280px;overflow:visible;touch-action:none;cursor:grab;user-select:none;margin-top:6px}
+.center-big{font-size:17px;font-weight:900;fill:var(--ink)}
+.center-sm{font-size:11.5px;fill:var(--muted)}
+.center-res{font-size:14px;font-weight:700}
+.center-goal{font-size:11px;fill:var(--muted)}
+/* 돌려봐 카드: 배경 전체가 열차 얼굴. 흰 바탕 안 보이게 */
+.facecard{position:relative;overflow:hidden;background:#d2d2d2}
+.facecard > *:not(.facebg){position:relative;z-index:1}
+svg.facebg{position:absolute;inset:0;width:100%;height:100%;z-index:0}
+.facecard h2,.facecard .hint,.facecard .legend{color:#fff;text-shadow:-1px -1px 0 #111,1px -1px 0 #111,-1px 1px 0 #111,1px 1px 0 #111}
+.facecard .tick{fill:#111;font-weight:900;paint-order:stroke;stroke:#fff;stroke-width:4px;stroke-linejoin:round}
+.facecard svg.dial{max-width:240px;margin-top:22px}
+.facecard .legend{margin-top:10px}
+.facecard .ghost{background:var(--card)}
+input.timeline{-webkit-appearance:none;appearance:none;display:block;width:100%;height:20px;margin:14px 0 0;border:2px solid var(--line);border-radius:12px;cursor:pointer;background:var(--soft)}
 input.timeline::-webkit-slider-thumb{-webkit-appearance:none;width:30px;height:30px;border-radius:50%;background:var(--accent);border:3px solid var(--ink);box-shadow:2px 2px 0 var(--shadow)}
 input.timeline::-moz-range-thumb{width:24px;height:24px;border-radius:50%;background:var(--accent);border:3px solid var(--ink)}
-.tl-labels{display:flex;justify-content:space-between;font:11.5px "Space Mono",monospace;color:var(--muted);margin-top:6px}
 input[type=range]{width:100%;accent-color:var(--travel)}
 .legend{display:flex;gap:14px;font-size:12px;color:var(--muted);margin-top:6px}
 .legend i{display:inline-block;width:12px;height:12px;border-radius:4px;margin-right:5px;vertical-align:-2px;border:1.5px solid var(--line)}
@@ -218,14 +227,14 @@ details summary{cursor:pointer;color:var(--muted);font-size:13px}
     <button data-what="10">10분 뒤엔?</button>
   </div>
 
-  <!-- 3. 돌려보기: 카드 전체가 열차 얼굴. 행선판엔 언제 나가는지, 띠엔 결과 -->
-  <section class="card facecard preview">
+  <!-- 3. 돌려보기: 원은 그대로, 카드 배경 전체가 열차 얼굴 (행선판·눈·띠), 원이 입 -->
+  <section class="card dialwrap facecard preview">
+    <svg class="facebg" id="faceBg" aria-hidden="true" preserveAspectRatio="none"></svg>
     <h2>돌려봐</h2>
-    <p class="ghost">목표 정하면 여기서 "10분 뒤에 나가면 몇 분 늦는지" 볼 수 있어.</p>
-    <svg class="bigface" id="dial" viewBox="0 0 32 25" role="img" aria-label="언제 나가면 어떻게 되는지"></svg>
-    <p class="facecap" id="faceCap"></p>
+    <p class="ghost">목표 정하면 여기서 "10분 뒤에 나가면 몇 분 늦는지" 돌려볼 수 있어.</p>
+    <p class="hint">언제 나가면 목표 시간에 맞는지 바로 보여줄게.</p>
+    <svg class="dial" id="dial" viewBox="0 0 300 300" role="img" aria-label="출발 시각 다이얼"></svg>
     <input type="range" id="offset" class="timeline" min="0" max="60" value="0" aria-label="몇 분 뒤 출발할지">
-    <div class="tl-labels" id="tlLabels"></div>
     <div class="legend">
       <span><i style="background:var(--free)"></i>여유</span>
       <span><i style="background:var(--prep)"></i>준비</span>
@@ -647,30 +656,95 @@ $("pickerClose").addEventListener("click", ()=>$("picker").close());
 $("fromBtn").addEventListener("click", ()=>openPicker("from"));
 $("toBtn").addEventListener("click", ()=>openPicker("to"));
 
-// ---- 돌려봐: 큰 열차 얼굴 + 가로 타임라인 ----
-function drawDial(p){
-  const t = now(), W = Math.max(20, Math.min(180, Math.ceil((p.target - t)/MIN/20)*20));   // 20분 단위 → 눈금이 5분 단위
-  const el = $("offset"); el.max = W;
-  const r = simulate(leaveNow() + selOffset*MIN), sl = slackOf(r, p.target);
-  const cut = !!r.cut && sl < 0, lv = faceLevel(sl, cut);
-  const lead = selOffset === 0 ? "지금 나가면" : `${dur(selOffset)} 뒤에 나가면`;
-  const res = cut ? "막차 끊김" : sl >= 0 ? `${dur(sl)} 남음` : `${dur(-sl)} 지각`;
-  // 글자 수에 맞춰 크기 줄이기 (행선판 폭 18칸, 띠는 전조등 사이 10칸)
-  const fit = (str, w, max) => Math.min(max, w / ([...str].length * 0.92));
-  const fs1 = fit(lead, 17, 1.8), fs2 = fit(res, 9.5, 1.7);
-  $("dial").innerHTML = `<g class="tr">${trainFace(meta(r.legs[0].l).c, lv, {wideSign:true})}</g>
-    <text x="16" y="${6.5 + fs1*0.36}" text-anchor="middle" class="face-text" font-size="${fs1}">${lead}</text>
-    <text x="16" y="${19.5 + fs2*0.36}" text-anchor="middle" class="face-text" font-size="${fs2}">${res}</text>`;
-  const cap = $("faceCap");
-  cap.textContent = cut ? `${r.cut.from} ${meta(r.cut.l).name} 첫차 ${when(r.cut.board)}까지 없어 · 목표 ${s.arrive}`
-    : `${hhmm(r.legs[0].board)} 열차 → ${hhmm(r.arrive)} 도착 · 목표 ${s.arrive}`;
-  cap.style.color = sl >= 5 ? "var(--ok)" : sl >= 0 ? "var(--ink)" : "var(--late)";
-  // 타임라인 바: 여유(초록) → 준비(핑크) → 이동(보라)
-  const pct = ms => Math.max(0, Math.min(100, (ms - t)/MIN / W * 100));
-  const a = pct(p.prepStart), b = pct(p.leave), e = pct(p.target);
-  el.style.background = `linear-gradient(to right, var(--free) 0 ${a}%, var(--prep) ${a}% ${b}%, var(--travel) ${b}% ${e}%, var(--soft) ${e}%)`;
-  $("tlLabels").innerHTML = [0, .25, .5, .75, 1].map(f => `<span>${f ? "+" + dur(Math.round(W*f)) : "지금"}</span>`).join("");
+// ---- 다이얼 ----
+const CX=150, CY=150, R=104;
+function polar(deg, r=R){ const a=(deg-90)*Math.PI/180; return [CX+r*Math.cos(a), CY+r*Math.sin(a)]; }
+function arc(d0, d1){
+  d0=Math.max(0,d0); d1=Math.min(359.99,d1); if(d1<=d0) return "";
+  const [x0,y0]=polar(d0),[x1,y1]=polar(d1);
+  return `M${x0} ${y0} A${R} ${R} 0 ${d1-d0>180?1:0} 1 ${x1} ${y1}`;
 }
+function drawDial(p){
+  const t = now();
+  const W = Math.max(15, Math.min(180, Math.ceil((p.target - t)/MIN)));
+  const deg = ms => (ms - t)/MIN / W * 360;
+  $("offset").max = W;
+  const r = simulate(leaveNow() + selOffset*MIN), sl = slackOf(r, p.target);
+  const color = sl >= 5 ? "var(--ok)" : sl >= 0 ? "var(--prep)" : "var(--late)";
+  const res = r.cut && sl < 0 ? `막차 끊김 · 첫차 ${hhmm(r.cut.board)}`
+    : sl >= 0 ? `${dur(sl)} 남음` : `${dur(-sl)} 지각`;
+  // 채팅 얼굴과 같은 단계: 여유면 둥실, 늦을수록 입 벌림, 짱늦음(30분+)·막차 끊김이면 눈 감음
+  const lv = faceLevel(sl, !!r.cut && sl < 0);
+  const DS = 3.2, lineC = meta(r.legs[0].l).c;
+  const dialChar = `<g class="tr dialchar ${lv === 0 ? "moving" : ""}" transform="translate(${CX} ${CY})"><g class="float"><g transform="translate(${-PX_W/2*DS} ${-PX_H*DS}) scale(${DS})" shape-rendering="crispEdges">${trainFace(lineC, lv)}</g></g></g>`;
+  const [kx,ky] = polar(selOffset / W * 360);
+  const ticks = [0,.25,.5,.75].map(f=>{
+    // 좌우 눈금은 원 바깥쪽으로 붙여서 링이랑 안 겹치게
+    const side = f === .25 ? "start" : f === .75 ? "end" : "middle";
+    const [x,y] = polar(f*360, side === "middle" ? R+24 : R+15);
+    const m = Math.round(W*f);
+    // 1시간 넘으면 두 줄로 ("+1시간" / "30분")
+    if(m >= 60 && m % 60) return `<text x="${x}" y="${y-3}" text-anchor="${side}" class="center-sm tick"><tspan x="${x}">+${Math.floor(m/60)}시간</tspan><tspan x="${x}" dy="13">${m%60}분</tspan></text>`;
+    return `<text x="${x}" y="${y+4}" text-anchor="${side}" class="center-sm tick">${f ? "+"+dur(m) : "지금"}</text>`;
+  }).join("");
+  $("dial").innerHTML = `
+    <circle cx="${CX}" cy="${CY}" r="${R+9}" fill="var(--card)" stroke="var(--line)" stroke-width="3"/>
+    <circle cx="${CX}" cy="${CY}" r="${R}" fill="none" stroke="var(--soft)" stroke-width="18"/>
+    <path d="${arc(0, deg(p.prepStart))}" stroke="var(--free)" stroke-width="18" fill="none"/>
+    <path d="${arc(deg(p.prepStart), deg(p.leave))}" stroke="var(--prep)" stroke-width="18" fill="none"/>
+    <path d="${arc(deg(p.leave), deg(p.target))}" stroke="var(--travel)" stroke-width="18" fill="none"/>
+    ${ticks}
+    <circle cx="${kx}" cy="${ky}" r="14" fill="var(--accent)" stroke="var(--ink)" stroke-width="3"/>
+    ${dialChar}
+    <text x="${CX}" y="${CY+21}" text-anchor="middle" class="center-big" style="${selOffset >= 60 ? "font-size:15px" : ""}">${selOffset===0 ? "지금 나가면" : dur(selOffset)+" 뒤에 나가면"}</text>
+    <text x="${CX}" y="${CY+38}" text-anchor="middle" class="center-sm">${hhmm(r.legs[0].board)} 열차 · ${hhmm(r.arrive)} 도착</text>
+    <text x="${CX}" y="${CY+56}" text-anchor="middle" class="center-res" fill="${color}">${res}</text>
+    <text x="${CX}" y="${CY+71}" text-anchor="middle" class="center-goal">목표 ${s.arrive}</text>`;
+  const pct = ms => Math.max(0, Math.min(100, (ms - t)/MIN / W * 100));
+  $("offset").style.background = `linear-gradient(to right, var(--free) 0 ${pct(p.prepStart)}%, var(--prep) ${pct(p.prepStart)}% ${pct(p.leave)}%, var(--travel) ${pct(p.leave)}% ${pct(p.target)}%, var(--soft) ${pct(p.target)}%)`;
+  drawFaceBg(lineC, lv);
+}
+// ---- 돌려봐 카드 배경: 카드 전체를 열차 얼굴로 (흰 바탕 안 보이게) ----
+// 카드 크기와 안쪽 요소 위치를 재서 픽셀 칸을 깔음: 제목 뒤 행선판, 원 양옆 위에 큰 눈, 아래 슬라이더 뒤 띠+전조등. 원이 입 역할
+function drawFaceBg(color, lv){
+  const card = document.querySelector(".facecard"), svg = $("faceBg");
+  const Wpx = card.clientWidth, Hpx = card.clientHeight, u = Wpx / 32, H = Math.ceil(Hpx / u);
+  // 위치는 getBoundingClientRect로 (SVG 요소엔 offsetTop이 없음)
+  const cTop = card.getBoundingClientRect().top;
+  const row = el => (el.getBoundingClientRect().top - cTop) / u, rowEnd = el => (el.getBoundingClientRect().bottom - cTop) / u;
+  const t = pxGrid(Math.max(H, 25));
+  t.rect(0, 0, 32, H, "g");
+  t.rect(0, 0, 1, H, "w"); t.rect(1, 0, 31, 1, "w");                       // 빛 받는 쪽
+  const signEnd = Math.ceil(rowEnd(card.querySelector(".hint")));
+  t.box(1, 1, 30, signEnd, "L", 0);                                          // 행선판 (제목 뒤)
+  const dial = $("dial"), db = dial.getBoundingClientRect(), ringTop = (db.top - cTop + db.height * (CY - R - 9) / 300) / u;
+  const eyeRow = Math.max(signEnd + 1, Math.round(ringTop));
+  // 눈은 원 양옆 위쪽 끝에 (원이 위로 갈수록 좁아서 안 가려짐)
+  if(lv >= 5) for(const x0 of [0, 24]){ t.rect(x0+1, eyeRow+4, 6, 1, "k"); t.put(x0, eyeRow+5, "k"); t.put(x0+7, eyeRow+5, "k"); }
+  else { t.stamp(EYE, 0, eyeRow); t.stamp(EYE, 24, eyeRow); }
+  const stripeTop = Math.floor(row($("offset"))) - 1;
+  t.rect(0, stripeTop, 32, H - stripeTop - 1, "L");                         // 노선색 띠
+  const lightRow = Math.round(row(card.querySelector(".legend")));             // 전조등은 범례 줄 양끝 (슬라이더에 안 가리게)
+  for(const x0 of [1, 27]){ t.rect(x0, lightRow, 4, 2, "n"); t.rect(x0 + 1, lightRow, 2, 2, lv >= 5 ? "s" : "y"); }
+  t.rect(0, H - 1, 32, 1, "w");
+  const rows = t.g.slice(0, H).map(r => r.join(""));
+  const lid = lv >= 5 ? "" : `<g class="lid">${pxRects(overlayRows(o => { for(const x0 of [0, 24]){ o.rect(x0, eyeRow, 8, 9, "g"); o.rect(x0+1, eyeRow+4, 6, 1, "k"); } }, H), color)}</g>`;
+  svg.setAttribute("viewBox", `0 0 32 ${Hpx / u}`);
+  svg.innerHTML = `<g class="tr" shape-rendering="crispEdges">${pxRects(rows, color)}${lid}</g>`;
+}
+// 카드 크기가 바뀌면(화면 폭 등) 배경 얼굴 다시 그림
+new ResizeObserver(() => { if(ready()) requestAnimationFrame(() => drawDial(plan())); }).observe(document.querySelector(".facecard"));
+
+function setOffsetFromPointer(e){
+  const box = $("dial").getBoundingClientRect();
+  const x = (e.clientX - box.left)/box.width*300 - CX, y = (e.clientY - box.top)/box.height*300 - CY;
+  let deg = Math.atan2(y, x)*180/Math.PI + 90; if(deg<0) deg+=360;
+  selOffset = Math.round(deg/360*Number($("offset").max)); $("offset").value = selOffset; drawDial(plan());
+}
+let dragging=false;
+$("dial").addEventListener("pointerdown", e=>{dragging=true; $("dial").setPointerCapture(e.pointerId); setOffsetFromPointer(e);});
+$("dial").addEventListener("pointermove", e=>{ if(dragging) setOffsetFromPointer(e); });
+$("dial").addEventListener("pointerup", ()=>dragging=false);
 $("offset").addEventListener("input", e=>{ selOffset = Number(e.target.value); drawDial(plan()); });
 
 // ---- 경로 ----
@@ -714,9 +788,9 @@ const PX = 1.35, PX_W = 32, PX_H = 25; // 캐릭터 약 43×34
 // 눈: 까만 테두리 + 큰 흰 눈동자 + 아래 웃는 하이라이트
 const EYE = ["..kkkk..", ".kkkkkk.", "kkeeeekk", "kkeeeekk", "kkeeeekk", "kkkeekkk", "kwkkkkwk", ".kwwwwk.", "..kkkk.."];
 const HAND_L = [".kk", "khh", "khh", "khh", "khh", ".kk"], HAND_R = ["kk.", "hhk", "hhk", "hhk", "hhk", "kk."];
-function pxGrid(){
-  const g = Array.from({length: PX_H}, () => Array(PX_W).fill("."));
-  const put = (x, y, c) => { if(x >= 0 && x < PX_W && y >= 0 && y < PX_H) g[y][x] = c; };
+function pxGrid(h = PX_H){
+  const g = Array.from({length: h}, () => Array(PX_W).fill("."));
+  const put = (x, y, c) => { if(x >= 0 && x < PX_W && y >= 0 && y < h) g[y][x] = c; };
   const rect = (x, y, w, h, c) => { for(let j = y; j < y+h; j++) for(let i = x; i < x+w; i++) put(i, j, c); };
   // 모서리를 r칸씩 깎은 상자 (테두리 k)
   const box = (x0, y0, x1, y1, fill, r) => {
@@ -752,7 +826,7 @@ function trainRows(mood, opts = {}){
 const MOUTH_SMILE = t => { t.put(14, 15, "k"); t.put(17, 15, "k"); t.rect(15, 16, 2, 1, "k"); };
 const MOUTH_OPEN = t => { t.rect(15, 14, 2, 1, "k"); t.put(14, 15, "k"); t.put(17, 15, "k"); t.rect(15, 15, 2, 2, "r"); t.put(14, 16, "k"); t.put(17, 16, "k"); t.rect(15, 17, 2, 1, "k"); };
 const CHEEKS = t => { t.rect(4, 16, 2, 1, "p"); t.rect(26, 16, 2, 1, "p"); };
-function overlayRows(draw){ const t = pxGrid(); draw(t); return t.g.map(row => row.join("")); }
+function overlayRows(draw, h){ const t = pxGrid(h); draw(t); return t.g.map(row => row.join("")); }
 function pxRects(rows, color){
   let out = "";
   rows.forEach((row, y) => {
