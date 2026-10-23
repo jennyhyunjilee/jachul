@@ -72,6 +72,19 @@ button:active{transform:translate(2px,2px);box-shadow:0 0 0 var(--shadow)}
 .feed{display:flex;flex-direction:column;gap:10px;margin-bottom:14px}
 .msg{max-width:90%;padding:12px 14px;border-radius:18px;font-size:15.5px;animation:pop .25s ease-out;border:2px solid var(--line)}
 .msg.agent{background:var(--card);border-top-left-radius:6px;align-self:flex-start;box-shadow:4px 4px 0 var(--free)}
+/* 메신저처럼: 왼쪽 위에 아바타(얼굴만, 둥실 없음), 옆에 이름 + 말풍선 */
+.arow{display:flex;gap:10px;align-items:flex-start;align-self:flex-start;max-width:94%;animation:pop .25s ease-out}
+.avatar{flex:none;width:58px;height:58px;padding:6px;border:2px solid var(--line);border-radius:16px;background:#d2d2d2;box-shadow:3px 3px 0 var(--shadow)}
+.avatar svg{display:block;width:100%;height:100%}
+.abody{min-width:0}
+.aname{font-size:12px;font-weight:900;color:var(--muted);margin:0 0 4px 2px}
+.arow .msg{max-width:none;animation:none}
+.avatar .lid{opacity:0}
+.feed .arow:last-child .avatar .lid{animation:lid 4.2s steps(1,end) infinite}
+.typing{display:inline-flex;gap:5px;padding:4px 2px}
+.typing i{width:7px;height:7px;background:var(--ink);opacity:.25;animation:dot 1.2s steps(1,end) infinite}
+.typing i:nth-child(2){animation-delay:.2s}.typing i:nth-child(3){animation-delay:.4s}
+@keyframes dot{0%{opacity:.25}30%{opacity:1}60%{opacity:.25}}
 .msg.agent.warn{box-shadow:4px 4px 0 var(--prep)}
 .msg.agent.urgent{box-shadow:4px 4px 0 var(--travel)}
 .msg.agent.late{box-shadow:4px 4px 0 var(--late)}
@@ -137,7 +150,7 @@ svg.strip{width:100%;height:auto;display:block;margin-top:6px;overflow:visible}
 .tr.mine .hand-b{animation:handB 1.4s steps(1,end) infinite}
 @keyframes handA{0%{opacity:1}50%{opacity:0}}
 @keyframes handB{0%{opacity:0}50%{opacity:1}}
-@media (prefers-reduced-motion: reduce){ .tr .float,.tr .lid,.tr .hand-a,.tr .hand-b,.source.live i{animation:none} }
+@media (prefers-reduced-motion: reduce){ .tr .float,.tr .lid,.tr .hand-a,.tr .hand-b,.source.live i,.feed .avatar .lid,.typing i{animation:none} }
 .trains{list-style:none;margin:10px 0 0;padding:0;font-size:13.5px}
 .trains li{display:flex;gap:10px;align-items:baseline;padding:7px 8px;border-radius:10px}
 .trains .eta{font-weight:700;min-width:46px}
@@ -504,24 +517,75 @@ function judge(p, t){
 function whatIf(off){
   const p = plan(), r = simulate(leaveNow() + off*MIN), sl = slackOf(r, p.target);
   const lead = off === 0 ? "지금 나가면" : `${dur(off)} 뒤에 나가면`;
-  if(r.cut && sl < 0) return {level:"late", title:"막차 끊겨. 지하철로는 못 가.",
+  if(r.cut && sl < 0) return {level:"late", face:5, title:"막차 끊겨. 지하철로는 못 가.",
     body:`${lead} ${r.cut.from}에서 ${meta(r.cut.l).name} 첫차 ${when(r.cut.board)}까지 기다려야 돼. ${s.to} 도착은 ${when(r.arrive)}, 목표는 ${s.arrive}.`};
   const title = sl >= 5 ? `${dur(sl)} 남아. 괜찮아.` : sl > 0 ? `${sl}분 남아. 빠듯해.` : sl === 0 ? "딱 맞춰 도착. 여유 없어." : `${dur(-sl)} 지각. 그러지 마.`;
-  return {level: sl >= 5 ? "" : sl >= 0 ? "warn" : "late", title, body:`${lead} ${r.legs[0].from} ${when(r.legs[0].board)} 열차 타고 ${s.to}에 ${when(r.arrive)} 도착. 목표는 ${s.arrive}.${(k => k ? ` ${lastWord(k)}, 놓치면 끝.` : "")(r.legs.map((l, k) => isLastTrain(l, l.board, k === 0)).find(Boolean))}`};
+  return {level: sl >= 5 ? "" : sl >= 0 ? "warn" : "late", face: faceLevel(sl), title, body:`${lead} ${r.legs[0].from} ${when(r.legs[0].board)} 열차 타고 ${s.to}에 ${when(r.arrive)} 도착. 목표는 ${s.arrive}.${(k => k ? ` ${lastWord(k)}, 놓치면 끝.` : "")(r.legs.map((l, k) => isLastTrain(l, l.board, k === 0)).find(Boolean))}`};
 }
-function current(){ return judge(ready() ? plan() : null, now()); }
+// ---- 채팅 아바타: 눈이랑 입만 있는 맑눈광 얼굴 (20×16칸) ----
+// 0 여유: 살짝 웃음 · 1 빠듯: 일자 입 · 2 조금 늦음: 입 쪼끔 벌림 · 3 늦음: 더 벌림 · 4 많이 늦음: 왕 벌림 · 5 짱늦음/막차 끊김: 눈 감음
+const FACE_EYE = ["..kkkk..", ".kwwwwk.", "kwwwwwwk", "kwwkkwwk", "kwwkkwwk", "kwwwwwwk", ".kwwwwk.", "..kkkk.."];
+const FACE_MOUTH = [
+  t => { t.put(7, 11, "k"); t.put(12, 11, "k"); t.rect(8, 12, 4, 1, "k"); },
+  t => { t.rect(7, 12, 6, 1, "k"); },
+  t => { t.stamp([".kk.", "krrk", ".kk."], 8, 11); },
+  t => { t.stamp([".kkkk.", "krrrrk", "krrrrk", ".kkkk."], 7, 10); },
+  t => { t.stamp(["..kkkk..", ".krrrrk.", "krrrrrrk", "krrrrrrk", ".krrrrk.", "..kkkk.."], 6, 9); },
+  t => { t.rect(8, 12, 4, 1, "k"); },
+];
+function faceSvg(level){
+  const t = pxGrid();
+  const eyes = level >= 5
+    ? () => { for(const x0 of [1, 11]){ t.rect(x0+1, 4, 6, 1, "k"); t.put(x0, 5, "k"); t.put(x0+7, 5, "k"); } }
+    : () => { t.stamp(FACE_EYE, 1, 1); t.stamp(FACE_EYE, 11, 1); };
+  eyes(); FACE_MOUTH[level](t);
+  const rows = t.g.slice(0, 16).map(r => r.slice(0, 20).join(""));
+  const lid = level >= 5 ? "" : `<g class="lid">${pxRects(overlayRows(o => { for(const x0 of [1, 11]){ o.rect(x0, 1, 8, 8, "g"); o.rect(x0+1, 5, 6, 1, "k"); } }).slice(0, 16).map(r => r.slice(0, 20)), "")}</g>`;
+  return `<svg viewBox="0 0 20 16" shape-rendering="crispEdges" aria-hidden="true">${pxRects(rows, "")}${lid}</svg>`;
+}
+// 늦은 정도(분) → 얼굴 단계
+const faceLevel = (sl, cut) => cut ? 5 : sl >= 5 ? 0 : sl >= 0 ? 1 : sl >= -5 ? 2 : sl >= -15 ? 3 : sl >= -29 ? 4 : 5;
+function faceFor(m, p){
+  if(!p) return 1;
+  if(["free", "soon", "prep"].includes(m.phase)) return 0;
+  if(m.phase === "shoes") return 1;
+  const r = simulate(leaveNow()), sl = slackOf(r, p.target);
+  if(m.phase === "over") return 5;
+  return faceLevel(sl, !!r.cut && sl < 0);
+}
+function current(){
+  const p = ready() ? plan() : null, m = judge(p, now());
+  m.face = faceFor(m, p);
+  return m;
+}
 function say(m, who="agent"){
-  const el = document.createElement("div");
-  el.className = `msg ${who} ${m.level||""}`;
-  if(who === "me"){ el.textContent = m; }
-  else {
-    el.innerHTML = `<b></b><span></span><span class="time"></span>`;
-    el.querySelector("b").textContent = m.title;
-    el.querySelector("span").textContent = m.body;
-    el.querySelector(".time").textContent = hhmm(now());
+  const feed = $("feed");
+  let el;
+  if(who === "me"){
+    el = document.createElement("div");
+    el.className = "msg me"; el.textContent = m;
+  } else {
+    el = document.createElement("div");
+    el.className = "arow";
+    el.innerHTML = `<div class="avatar">${faceSvg(m.typing ? 1 : (m.face ?? 1))}</div><div class="abody"><div class="aname">잔소리</div><div class="msg agent ${m.level||""}"></div></div>`;
+    const bubble = el.querySelector(".msg");
+    if(m.typing) bubble.innerHTML = `<span class="typing"><i></i><i></i><i></i></span>`;
+    else {
+      bubble.innerHTML = `<b></b><span></span><span class="time"></span>`;
+      bubble.querySelector("b").textContent = m.title;
+      bubble.querySelector("span").textContent = m.body;
+      bubble.querySelector(".time").textContent = hhmm(now());
+    }
   }
-  const feed = $("feed"); feed.append(el);
+  feed.append(el);
   while(feed.children.length > 4) feed.firstChild.remove();
+  return el;
+}
+// 대화하듯: 내가 물으면 잠깐 '입력 중…' 보이다가 대답
+function reply(question, answer){
+  say(question, "me");
+  const typing = say({typing:true});
+  setTimeout(() => { typing.remove(); say(answer()); }, 650);
 }
 
 // ---- 목표 카드 ----
@@ -613,12 +677,13 @@ function drawDial(p){
   const res = r.cut && sl < 0 ? `막차 끊김 · 첫차 ${hhmm(r.cut.board)}`
     : sl >= 0 ? `${dur(sl)} 남음` : `${dur(-sl)} 지각`;
   // 가운데 캐릭터: 여유 있으면 웃으며 둥실, 빠듯하면 웃지만 가만히, 늦으면 입 벌리고 놀람, 막차 끊기면 눈 감음
-  const face = r.cut && sl < 0 ? {mood:"gone", mouth:"open", cls:""}
-    : sl >= 5 ? {mood:"can", mouth:"smile", cls:"moving"}
-    : sl >= 0 ? {mood:"can", mouth:"smile", cls:""}
-    : {mood:"can", mouth:"open", cls:""};
-  const DS = 2, lineC = meta(r.legs[0].l).c;
-  const dialChar = `<g class="tr dialchar ${face.cls}" transform="translate(${CX} ${CY-6})"><g class="float"><g transform="translate(${-PX_W/2*DS} ${-PX_H*DS}) scale(${DS})" shape-rendering="crispEdges">${trainBody(lineC, face.mood, face.mouth)}</g></g></g>`;
+  // 채팅 얼굴과 같은 단계: 여유면 둥실, 늦을수록 입 벌림, 짱늦음(30분+)·막차 끊김이면 눈 감음
+  const lv = faceLevel(sl, !!r.cut && sl < 0);
+  const face = lv >= 5 ? {mood:"gone", mouth:"open", cls:""}
+    : lv >= 2 ? {mood:"can", mouth:"open", cls:""}
+    : {mood:"can", mouth:"smile", cls: lv === 0 ? "moving" : ""};
+  const DS = 3.2, lineC = meta(r.legs[0].l).c;
+  const dialChar = `<g class="tr dialchar ${face.cls}" transform="translate(${CX} ${CY})"><g class="float"><g transform="translate(${-PX_W/2*DS} ${-PX_H*DS}) scale(${DS})" shape-rendering="crispEdges">${trainBody(lineC, face.mood, face.mouth)}</g></g></g>`;
   const [kx,ky] = polar(selOffset / W * 360);
   const ticks = [0,.25,.5,.75].map(f=>{
     // 좌우 눈금은 원 바깥쪽으로 붙여서 링이랑 안 겹치게
@@ -637,10 +702,10 @@ function drawDial(p){
     ${ticks}
     <circle cx="${kx}" cy="${ky}" r="14" fill="var(--accent)" stroke="var(--ink)" stroke-width="3"/>
     ${dialChar}
-    <text x="${CX}" y="${CY+14}" text-anchor="middle" class="center-big" style="${selOffset >= 60 ? "font-size:15px" : ""}">${selOffset===0 ? "지금 나가면" : dur(selOffset)+" 뒤에 나가면"}</text>
-    <text x="${CX}" y="${CY+32}" text-anchor="middle" class="center-sm">${hhmm(r.legs[0].board)} 열차 · ${hhmm(r.arrive)} 도착</text>
-    <text x="${CX}" y="${CY+51}" text-anchor="middle" class="center-res" fill="${color}">${res}</text>
-    <text x="${CX}" y="${CY+67}" text-anchor="middle" class="center-goal">목표 ${s.arrive}</text>`;
+    <text x="${CX}" y="${CY+21}" text-anchor="middle" class="center-big" style="${selOffset >= 60 ? "font-size:15px" : ""}">${selOffset===0 ? "지금 나가면" : dur(selOffset)+" 뒤에 나가면"}</text>
+    <text x="${CX}" y="${CY+38}" text-anchor="middle" class="center-sm">${hhmm(r.legs[0].board)} 열차 · ${hhmm(r.arrive)} 도착</text>
+    <text x="${CX}" y="${CY+56}" text-anchor="middle" class="center-res" fill="${color}">${res}</text>
+    <text x="${CX}" y="${CY+71}" text-anchor="middle" class="center-goal">목표 ${s.arrive}</text>`;
 }
 function setOffsetFromPointer(e){
   const box = $("dial").getBoundingClientRect();
@@ -879,11 +944,11 @@ function renderSource(){
 }
 
 // ---- 버튼 ----
-$("ask").addEventListener("click", ()=>{ say("나 지금 어때?", "me"); say(current()); });
+$("ask").addEventListener("click", ()=> reply("나 지금 어때?", current));
 document.querySelectorAll("[data-what]").forEach(b=>b.addEventListener("click", ()=>{
   if(!ready()) return;
   const off = Number(b.dataset.what);
-  say(b.textContent, "me"); say(whatIf(off));
+  reply(b.textContent, () => whatIf(off));
   selOffset = off; $("offset").value = off; drawDial(plan());
 }));
 
