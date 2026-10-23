@@ -121,11 +121,15 @@ input[type=range]{width:100%;accent-color:var(--travel)}
 
 /* 경로 */
 .route{list-style:none;margin:12px 0 0;padding:0;position:relative}
-.runner{position:absolute;width:22px;height:31px;z-index:2;pointer-events:none}
+.runner{position:absolute;width:32px;height:32px;z-index:2;pointer-events:none}
 .runner svg{display:block;width:100%;height:100%}
-.runner .fb{opacity:0}
-.runner.moving .fa{animation:runA .5s steps(1,end) infinite}
-.runner.moving .fb{animation:runB .5s steps(1,end) infinite}
+.runner .fb,.avatars .fb{opacity:0}
+.avatars{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.avatars button{display:flex;flex-direction:column;align-items:center;gap:4px;padding:8px 2px;font-size:11px;font-weight:700;background:var(--card)}
+.avatars button svg{width:44px;height:44px}
+.avatars button.on{background:var(--accent);color:var(--accentInk)}
+.runner.moving .fa{animation:runA .6s steps(1,end) infinite}
+.runner.moving .fb{animation:runB .6s steps(1,end) infinite}
 @keyframes runA{0%{opacity:1}50%{opacity:0}}
 @keyframes runB{0%{opacity:0}50%{opacity:1}}
 .route li{display:grid;grid-template-columns:50px 18px 1fr;gap:0 10px;align-items:start;min-height:44px}
@@ -305,6 +309,8 @@ button:not([data-st]):active{transform:translate(3px,3px);filter:none}
           <option value="5">5분마다</option><option value="10">10분마다</option><option value="15">15분마다</option>
         </select></div>
     </div>
+    <label style="margin-top:14px">내 캐릭터 (경로 위에서 달리는 나)</label>
+    <div class="avatars" id="avatarPick"></div>
     <div class="row">
       <button type="button" id="notifyBtn">알림 켜기</button>
       <button type="button" id="homeBtn">여기가 집이야</button>
@@ -361,7 +367,7 @@ const linesAt = name => [...new Set((BYNAME.get(name)||[]).map(lineOf))].sort();
 const badges = name => linesAt(name).map(badge).join(" ");
 
 // ---- 저장 ----
-const DEFAULTS = {from:"", to:"", arrive:"", prep:25, walkTo:7, walkFrom:5, buffer:3, interval:10, delay:0, home:null, recent:[]};
+const DEFAULTS = {avatar:"longBlack", from:"", to:"", arrive:"", prep:25, walkTo:7, walkFrom:5, buffer:3, interval:10, delay:0, home:null, recent:[]};
 const store = {
   get(){ try{ return JSON.parse(localStorage.getItem("jansori-v1")) }catch{ return null } },
   set(v){ try{ localStorage.setItem("jansori-v1", JSON.stringify(v)) }catch{} }
@@ -730,11 +736,14 @@ $("dial").addEventListener("pointerup", ()=>dragging=false);
 $("offset").addEventListener("input", e=>{ selOffset = Number(e.target.value); drawDial(plan()); });
 
 // ---- 경로 ----
-function renderRoute(p){
-  // GPS로 집을 나온 걸 봤으면 그때 출발한 실제 여정, 아니면 계획(또는 '지금 나가면')
-  const gone = gpsKnown && !atHome && leftAt;
+// 지금 따라가는 여정: GPS로 집을 나온 걸 봤으면 그때 출발한 실제 여정, 아니면 계획(지났으면 '지금 나가면')
+function currentTrip(p){
+  const gone = !!(gpsKnown && !atHome && leftAt);
   const past = !gone && now() > p.leave;
-  const sim = gone ? simulate(Math.ceil(leftAt/MIN)*MIN) : past ? simulate(leaveNow()) : p.sim, sl = slackOf(sim, p.target);
+  return {gone, past, sim: gone ? simulate(Math.ceil(leftAt/MIN)*MIN) : past ? simulate(leaveNow()) : p.sim};
+}
+function renderRoute(p){
+  const {gone, past, sim} = currentTrip(p), sl = slackOf(sim, p.target);
   const li = (t, what, sub, dotc, seg, cls="") =>
     `<li class="${cls}"><span class="t">${t}</span><span class="rail" style="--seg:${seg};--dotc:${dotc}"><span class="dot"></span></span><span class="what">${what}${sub?`<small>${sub}</small>`:""}</span></li>`;
   const rows = [], times = [];
@@ -763,13 +772,74 @@ function renderRoute(p){
 }
 
 // ---- 나: 경로 위를 달리는 작은 픽셀 사람 (머리 크고 팔다리 짧게, 눈·입 점) ----
-const RUN_HEAD = ["...kkkk...", "..kffffk..", ".kffffffk.", ".kfkffkfk.", ".kffffffk.", ".kffkkffk.", "..kffffk..", "...kkkk..."];
-const RUN_A = ["..kkLLkk..", ".kLkLLkLk.", "...kLLk...", "...kkkk...", "..kk..kk..", ".kk....kk."];   // 팔 벌리고 다리 쭉
-const RUN_B = ["...kLLk...", "..kkLLkk..", "...kLLk...", "...kkkk...", "...kkkk...", "...k..k..."];   // 팔 모으고 다리 모음
+// 8비트 꼬마 (18×18칸): 머리 크고 몸 짧게, 눈은 세로 두 칸, 볼터치, 입은 무표정 일자
+// H 머리 · s 피부 · e 눈 · c 볼 · m 입 · T 윗옷 · P 바지 · o 신발 · k 테두리
+const KID_HEAD = [
+  "......kkkkkk......",
+  "....kkHHHHHHkk....",
+  "...kHHHHHHHHHHk...",
+  "..kHHHHHHHHHHHHk..",
+  "..kHHHHHHHHHHHHk..",
+  "..kHHssHHssssHHk..",
+  "..kHssssssssssHk..",
+  "..kHssessssessHk..",
+  "..kHssessssessHk..",
+  "..kHscsssssscsHk..",
+  "..kHHsssmmsssHHk..",
+];
+// 달리기 두 동작 (첫 번째 그림 포즈): A 한 팔 앞·한 팔 뒤, 다리 쭉 벌림 / B 팔 내리고 다리 모음
+const KID_RUN_A = [
+  ".....kTTTTTTk.....",
+  "....kTTTTTTTTkssk.",
+  ".kssTTTTTTTTk.....",
+  "...kkPPPPPPkk.....",
+  "...kPPPk.kPPPk....",
+  "..kook....kPPk....",
+  "..kkk.....kook....",
+];
+const KID_RUN_B = [
+  ".....kTTTTTTk.....",
+  "....kTTTTTTTTk....",
+  "...ksTTTTTTTTsk...",
+  "...kkPPPPPPkk.....",
+  "....kPPkkPPk......",
+  "....kPPk.kPk......",
+  "....kook.kook.....",
+];
+// 긴 머리: 몸 뒤로 내려오는 머리카락 (빈칸에만 그림)
+const KID_LONG = {11: ["kHH", "HHk"], 12: ["kHH", "HHk"], 13: ["kHk", "kHk"], 14: [".kk", "kk."]};
+const KID_LOOKS = {
+  longBlack:  {name:"긴 검정", long:true,  H:"#26262e", T:"#f28cb0", P:"#4aa3b8"},
+  longBrown:  {name:"긴 갈색", long:true,  H:"#8a4b2a", T:"#ffe14a", P:"#4a7fd9"},
+  shortBlack: {name:"짧은 검정", long:false, H:"#26262e", T:"#4aa3e8", P:"#6ab04c"},
+  shortOrange:{name:"짧은 주황", long:false, H:"#e0892c", T:"#f26b2a", P:"#4a7fd9"},
+};
+const KID_FIXED = {k:"#111", s:"#ffe0c2", e:"#111", c:"#ffa3b1", m:"#8a5a48", o:"#5a3a2a"};
 let gpsKnown = false, leftAt = null;   // leftAt: GPS로 집을 벗어난 걸 처음 본 시각
-function runnerSvg(){
-  const frame = body => pxRects([...RUN_HEAD, ...body], "var(--accent)");
-  return `<svg viewBox="0 0 10 14" shape-rendering="crispEdges" aria-hidden="true"><g class="fa">${frame(RUN_A)}</g><g class="fb">${frame(RUN_B)}</g></svg>`;
+function kidRows(body, look){
+  const rows = [...KID_HEAD, ...body].map(r => r.split(""));
+  if(look.long) for(const [y, [l, r]] of Object.entries(KID_LONG)){
+    [...l].forEach((c, i) => { if(c !== "." && rows[y][2+i] === ".") rows[y][2+i] = c; });
+    [...r].forEach((c, i) => { if(c !== "." && rows[y][13+i] === ".") rows[y][13+i] = c; });
+  }
+  return rows;
+}
+function kidRects(rows, look){
+  const pal = {...KID_FIXED, H:look.H, T:look.T, P:look.P};
+  let out = "";
+  rows.forEach((row, y) => {
+    for(let x = 0; x < row.length; ){
+      const c = row[x]; let w = 1;
+      while(row[x+w] === c) w++;
+      if(c !== ".") out += `<rect x="${x}" y="${y}" width="${w + .04}" height="1.04" fill="${pal[c]}"/>`;
+      x += w;
+    }
+  });
+  return out;
+}
+function runnerSvg(lookKey = s.avatar){
+  const look = KID_LOOKS[lookKey] || KID_LOOKS.longBlack;
+  return `<svg viewBox="0 0 18 18" shape-rendering="crispEdges" aria-hidden="true"><g class="fa">${kidRects(kidRows(KID_RUN_A, look), look)}</g><g class="fb">${kidRects(kidRows(KID_RUN_B, look), look)}</g></svg>`;
 }
 // 어디쯤 있는지: GPS로 집에 있으면 '집에서 나가기'에 서 있음, 집을 벗어났으면 계획 시각대로 경로를 따라 달림
 function placeRunner(times, homeIdx){
@@ -794,7 +864,7 @@ function placeRunner(times, homeIdx){
   const el = document.createElement("div");
   el.className = "runner" + (moving ? " moving" : "");
   el.innerHTML = runnerSvg();
-  el.style.left = `${Math.round(pos.x - 11)}px`; el.style.top = `${Math.round(pos.y - 26)}px`;
+  el.style.left = `${Math.round(pos.x - 16)}px`; el.style.top = `${Math.round(pos.y - 26)}px`;
   el.title = moving ? "나 (이동 중)" : leftHome ? "나 (도착)" : "나 (집)";
   route.append(el);
   $("routeWho").textContent = !s.home ? "설정에서 '여기가 집이야'를 누르면 GPS로 네 위치를 따라가." 
@@ -929,7 +999,7 @@ setInterval(stepTrains, 1000);
 
 function renderLive(p){
   const t = now(), past = t > p.leave;
-  const leg = (past ? simulate(leaveNow()) : p.sim).legs[0], m = meta(leg.l);
+  const trip = currentTrip(p), leg = trip.sim.legs[0], m = meta(leg.l);
   const up = upstream(leg, 6), stations = [leg.ids[0], ...up];
   const x1 = 296, gap = (x1 - 28)/6, xOf = k => x1 - k*gap, y = 96;
   let svg = `<line x1="${xOf(stations.length-1)-10}" y1="${y}" x2="${x1+26}" y2="${y}" stroke="${m.c}" stroke-width="9" stroke-linecap="round"/>`;
@@ -957,7 +1027,7 @@ function renderLive(p){
     trains.push({at, guess: !lv.some(x => x.at === at)});
     tt = at + 1000;
   }
-  const catchFrom = Math.max(leaveNow(), p.leave) + s.walkTo*MIN;
+  const catchFrom = trip.sim.leave + s.walkTo*MIN;
   const info = trains.map(tr => {
     const mm = (tr.at - t)/MIN, k = mm / m.ride, mine = !tr.short && tr.at === leg.board, can = !tr.short && tr.at >= catchFrom;
     return {tr, mm, k, mine, can, x: xOf(trackPos(k).pos), mood: mine ? "mine" : can ? "can" : "gone"};
@@ -1079,7 +1149,15 @@ $("notifyBtn").addEventListener("click", async ()=>{
 
 // ---- 설정 ----
 const form = $("form"), SET_KEYS = ["walkTo","walkFrom","buffer","interval","delay"];
-$("openSettings").addEventListener("click", ()=>{ for(const k of SET_KEYS) form.elements[k].value = s[k]; $("settings").showModal(); });
+function renderAvatarPick(){
+  $("avatarPick").innerHTML = Object.entries(KID_LOOKS).map(([k, l]) =>
+    `<button type="button" data-av="${k}" class="${s.avatar === k ? "on" : ""}" aria-pressed="${s.avatar === k}" title="${l.name}">${runnerSvg(k)}<span>${l.name}</span></button>`).join("");
+}
+$("avatarPick").addEventListener("click", e => {
+  const b = e.target.closest("[data-av]"); if(!b) return;
+  s.avatar = b.dataset.av; store.set(s); renderAvatarPick(); tick();
+});
+$("openSettings").addEventListener("click", ()=>{ for(const k of SET_KEYS) form.elements[k].value = s[k]; renderAvatarPick(); $("settings").showModal(); });
 $("sim").addEventListener("input", e=>{ simMin = Number(e.target.value); });
 form.addEventListener("submit", ()=>{
   for(const k of SET_KEYS) s[k] = Math.max(0, Number(form.elements[k].value)||0);
