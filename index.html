@@ -95,7 +95,9 @@ button:active{transform:translate(2px,2px);box-shadow:0 0 0 var(--shadow)}
 @media (prefers-color-scheme: dark){ :root:not([data-theme="light"]) .ask{box-shadow:5px 5px 0 var(--prep)} }
 :root[data-theme="dark"] .ask{box-shadow:5px 5px 0 var(--prep)}
 .ask:active{transform:translate(4px,4px);box-shadow:1px 1px 0 var(--shadow)}
-.chips{display:flex;gap:8px;margin:14px 0 22px;flex-wrap:wrap}
+.chips{display:flex;gap:8px;margin:14px 0 12px;flex-wrap:wrap}
+.askform{display:flex;gap:8px;margin:0 0 22px}
+.askform input{flex:1;min-width:0;font:inherit;padding:10px 12px;background:var(--card);color:var(--ink);border-style:solid;border-width:6px;border-image:var(--pxb) 2 / 6px / 0 stretch;background-clip:padding-box}
 
 .card{background:var(--card);border:2px solid var(--line);border-radius:22px;padding:18px;margin-bottom:18px;box-shadow:5px 5px 0 var(--shadow)}
 .card h2{font-size:17px;font-weight:700;letter-spacing:-.03em;margin:0 0 2px}
@@ -259,7 +261,16 @@ button:not([data-st]):active{transform:translate(3px,3px);filter:none}
     <button data-what="0">지금 나가면?</button>
     <button data-what="5">5분 뒤엔?</button>
     <button data-what="10">10분 뒤엔?</button>
+    <button data-ask="when">몇 시에 나가?</button>
+    <button data-ask="xfer">환승 어디서?</button>
+    <button data-ask="last">막차 언제야?</button>
+    <button data-ask="excuse">늦는다고 뭐라 해?</button>
+    <button id="bellBtn">🔔 늦으면 알림 받기</button>
   </div>
+  <form class="askform needgoal" id="askForm" autocomplete="off">
+    <input id="askText" maxlength="200" placeholder="잔소리한테 아무거나 물어봐" aria-label="잔소리한테 물어보기">
+    <button type="submit">보내기</button>
+  </form>
 
   <!-- 3. 돌려보기 -->
   <section class="card dialwrap preview">
@@ -596,10 +607,87 @@ function faceFor(m, p){
   if(m.phase === "over") return 5;
   return faceLevel(sl, !!r.cut && sl < 0);
 }
+// 같은 상황도 여러 말투 중 하나로 + 가끔 한 마디 더
+const pick = arr => arr[Math.floor(Math.random() * arr.length)];
+const TITLES = {
+  free:  ["아직 안 나가도 돼.", "여유 있어. 할 거 해.", "아직이야. 느긋하게.", "시간 넉넉해."],
+  soon:  ["하던 거 슬슬 정리해.", "곧 준비 시간이야.", "이제 마무리 각.", "슬슬 몸 일으켜."],
+  prep:  ["지금 준비 시작해.", "씻어. 지금.", "준비 시작! 미루지 마.", "이제 움직일 시간이야."],
+  shoes: ["신발 신어.", "현관으로 가.", "가방 들어. 출발.", "지금 안 나가면 놓쳐."],
+  home:  ["아직 집이야?", "왜 아직 집이야?", "집에서 뭐 해. 나가."],
+  go:    ["나갈 시간 지났어.", "출발 시간 지났다.", "빨리 나가. 지금."],
+  late:  ["너 개늦는다.", "이미 늦었어.", "지각 확정이야.", "늦었다. 인정해."],
+  cut:   ["막차 끊겼어.", "지하철 끝났어."],
+};
+const TAILS = {
+  free:  ["물 한 잔 마셔둬.", "폰 충전은 해놨지?", "지금 낮잠 자면 큰일 나."],
+  soon:  ["유튜브 끄고.", "그 영상 다음 거 보지 마."],
+  prep:  ["교통카드 챙겨.", "양말 짝 맞는지 봐.", "거울은 한 번만 봐."],
+  shoes: ["이어폰 찾지 말고 그냥 가.", "엘리베이터 기다릴 시간 없어.", "우산 필요하면 지금 챙겨."],
+  go:    ["계단은 뛰지 말고 빨리 걸어.", "환승할 때 빠른 칸 타."],
+  home:  ["지금 일어나면 아직 늦진 않을 수도 있어."],
+  late:  ["사과 문자 미리 써.", "뛰어도 안 돼. 연락부터 해."],
+};
+function vary(m){
+  if(TITLES[m.phase]) m.title = pick(TITLES[m.phase]);
+  if(TAILS[m.phase] && Math.random() < .5) m.body += " " + pick(TAILS[m.phase]);
+  return m;
+}
+// 칩으로 묻는 질문들
+const lastText = hm => { const [h, mm] = hm.split(":").map(Number); return (h >= 24 ? "새벽 " + String(h-24).padStart(2,"0") : String(h).padStart(2,"0")) + ":" + String(mm).padStart(2,"0"); };
+const ASK = {
+  when(){
+    const p = plan(), first = p.sim.legs[0];
+    if(p.infeasible) return {level:"late", face:4, title:"지금 바로 나가도 못 맞춰.", body:`제일 빨리 가도 ${s.to}에 ${hhmm(simulate(leaveNow()).arrive)} 도착이야.`};
+    return {level:"", face:0, title:`${when(p.leave)}에 나가.`, body:`준비는 ${when(p.prepStart)}부터. ${first.from}에서 ${when(first.board)} 열차 타면 ${s.arrive}까지 ${s.to} 맞아.`};
+  },
+  xfer(){
+    if(route.length < 2) return {level:"", face:0, title:"갈아탈 거 없어.", body:`${route[0].from}에서 ${meta(route[0].l).name} 타고 ${route[0].to}까지 쭉 가.`};
+    return {level:"warn", face:1, title:`${route.length - 1}번 갈아타.`, body: route.slice(1).map(l => `${l.from}에서 ${meta(l.l).name}(${l.toward})`).join(", ") + ". 내릴 때 환승 통로 가까운 칸이 좋아."};
+  },
+  last(){
+    return {level:"warn", face:1, title:"막차는 대략 이래.", body: route.map(l => `${meta(l.l).name} ${lastText(meta(l.l).last || "24:00")}쯤`).join(", ") + ". 역마다 몇 분씩 달라서 넉넉하게 잡아."};
+  },
+  excuse(){
+    const p = plan(), sim = currentTrip(p).gone ? currentTrip(p).sim : simulate(leaveNow()), sl = slackOf(sim, p.target);
+    if(sl >= 0) return {level:"", face:0, title:"아직 안 늦어. 변명 필요 없어.", body:`지금 나가면 ${s.to}에 ${hhmm(sim.arrive)} 도착이야. 그냥 나가.`};
+    return {level:"late", face:faceLevel(sl), title:"이렇게 보내.", body:`"미안! 나 지하철 타고 가는 중인데 ${hhmm(sim.arrive)}쯤 도착할 것 같아 (${dur(-sl)} 늦어). 먼저 시작하고 있어 🙏"`};
+  },
+};
+// 직접 쓴 질문: Claude가 연결돼 있으면 Claude가, 아니면 키워드로 대답
+function localAnswer(q){
+  if(!ready()) return current();
+  if(/환승|갈아/.test(q)) return ASK.xfer();
+  if(/막차|첫차/.test(q)) return ASK.last();
+  if(/변명|연락|뭐라|늦는다고/.test(q)) return ASK.excuse();
+  if(/언제|몇\s*시|나가야/.test(q)) return ASK.when();
+  if(/(\d+)\s*분\s*(뒤|후)/.test(q)) return whatIf(Math.min(180, Number(q.match(/(\d+)\s*분/)[1])));
+  if(/지금|어때|늦|지각/.test(q)) return current();
+  const m = current();
+  return {level:"", face:1, title:"그건 잘 모르겠어.", body:`난 지하철 출발만 챙겨. 지금은 이래: ${m.title} ${m.body}`};
+}
+function chatContext(){
+  const p = ready() ? plan() : null, m = current();
+  return {
+    지금: hhmm(now()),
+    목표: s.to && s.arrive ? `${s.arrive}까지 ${s.to}` : null, 출발역: s.from || null, 준비시간_분: s.prep,
+    계획: p ? {준비시작: hhmm(p.prepStart), 집에서_나가기: hhmm(p.leave), 탈_열차: `${p.sim.legs[0].from} ${hhmm(p.sim.legs[0].board)}`,
+              도착예정: hhmm(p.sim.arrive), 목표보다_여유_분: slackOf(p.sim, p.target), 지금_나가도_못맞춤: !!p.infeasible} : null,
+    경로: route ? route.map(l => `${l.from}→${l.to} ${meta(l.l).name}`) : null,
+    지금_판단: `${m.title} ${m.body}`, 실시간_열차정보: isLive(),
+  };
+}
+async function askClaude(q){
+  const r = await fetch("api/chat", {method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({question:q, context: chatContext()})});
+  const j = await r.json();
+  if(!j.ok) throw new Error(j.error || "실패");
+  const m = current();
+  return {level:m.level, face:m.face, title:j.title, body:j.body};
+}
 function current(){
   const p = ready() ? plan() : null, m = judge(p, now());
   m.face = faceFor(m, p);
-  return m;
+  return vary(m);
 }
 function say(m, who="agent"){
   const feed = $("feed");
@@ -628,7 +716,9 @@ function say(m, who="agent"){
 function reply(question, answer){
   say(question, "me");
   const typing = say({typing:true});
-  setTimeout(() => { typing.remove(); say(answer()); }, 650);
+  Promise.all([Promise.resolve().then(answer), new Promise(r => setTimeout(r, 650))])
+    .then(([a]) => { typing.remove(); say(a); })
+    .catch(() => { typing.remove(); say({level:"warn", face:1, title:"앗, 대답이 꼬였어.", body:"다시 물어봐."}); });
 }
 
 // ---- 목표 카드 ----
@@ -1220,11 +1310,39 @@ document.querySelectorAll("[data-what]").forEach(b=>b.addEventListener("click", 
   selOffset = off; $("offset").value = off; drawDial(plan());
 }));
 
+document.querySelectorAll("[data-ask]").forEach(b => b.addEventListener("click", () => { if(ready()) reply(b.textContent, ASK[b.dataset.ask]); }));
+$("askForm").addEventListener("submit", e => {
+  e.preventDefault();
+  const q = $("askText").value.trim(); if(!q) return;
+  $("askText").value = "";
+  reply(q, () => STATUS.claude ? askClaude(q).catch(() => localAnswer(q)) : localAnswer(q));
+});
+$("bellBtn").addEventListener("click", async () => {
+  unlockAudio();
+  if(!("Notification" in window)) return say({level:"warn", face:1, title:"이 브라우저는 알림이 안 돼.", body:"대신 화면 켜두면 소리로 보챌게."});
+  const r = await Notification.requestPermission();
+  $("bellBtn").textContent = r === "granted" ? "🔔 알림 켜짐" : "🔕 알림 꺼짐";
+  say(r === "granted" ? {level:"", face:0, title:"알림 켰어.", body:`늦을 것 같으면 ${s.interval}분마다 울릴게.`} : {level:"warn", face:1, title:"알림이 막혀 있어.", body:"브라우저 설정에서 알림을 허용해줘."});
+});
+
 // ---- 에이전트가 먼저 말 건다 ----
 function notify(m){
   if(!("Notification" in window) || Notification.permission!=="granted") return;
   try{ new Notification(m.title, {body:m.body, tag:"jansori"}); }catch{}
 }
+// 8비트 삑삑 (브라우저는 사용자가 한 번 눌러야 소리가 남)
+let audioCtx = null;
+function unlockAudio(){ try{ audioCtx ||= new (window.AudioContext || window.webkitAudioContext)(); audioCtx.resume(); }catch{} }
+document.addEventListener("pointerdown", unlockAudio, {once:true});
+function beep(){
+  if(!audioCtx || audioCtx.state !== "running") return;
+  [880, 660, 880].forEach((f, i) => {
+    const o = audioCtx.createOscillator(), g = audioCtx.createGain(), t0 = audioCtx.currentTime + i * .13;
+    o.type = "square"; o.frequency.value = f; g.gain.value = .06;
+    o.connect(g).connect(audioCtx.destination); o.start(t0); o.stop(t0 + .09);
+  });
+}
+function ring(m){ notify(m); beep(); }
 function tick(){
   if(!NET) return;
   const t = now();
@@ -1236,10 +1354,13 @@ function tick(){
     drawDial(p); renderRoute(p); renderLive(p);
     for(let mark = p.prepStart - 30*MIN; mark < p.leave; mark += s.interval*MIN){
       const id = p.leave+":"+mark;
-      if(m.phase === lastPhase && t >= mark && t - mark < 2*MIN && !sent.has(id)){ sent.add(id); say(m); notify(m); }
+      if(m.phase === lastPhase && t >= mark && t - mark < 2*MIN && !sent.has(id)){ sent.add(id); say(m); ring(m); }
     }
   }
-  if(m.phase !== lastPhase || forceSay){ lastPhase = m.phase; forceSay = false; say(m); if(ready()) notify(m); }
+  // 늦었거나 지금 나가야 하면: 설정한 간격(5/10/15분)마다 채팅 + 알림 + 삑
+  const NAG = ["shoes", "go", "home", "late", "cut"], nagId = "nag:" + m.phase + ":" + Math.floor(t / (s.interval * MIN));
+  if(ready() && NAG.includes(m.phase) && m.phase === lastPhase && !sent.has(nagId)){ sent.add(nagId); say(m); ring(m); }
+  if(m.phase !== lastPhase || forceSay){ lastPhase = m.phase; forceSay = false; sent.add(nagId); say(m); if(ready()) ring(m); }
 }
 
 // ---- GPS ----

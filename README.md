@@ -30,6 +30,18 @@
 (`build_network.py`를 돌리면 자동으로 갱신됨).
 실시간은 API 키를 숨겨야 하고 서울시 API가 http라서, 브라우저가 직접 못 부르고 서버(`server.py`)가 꼭 필요하다.
 
+
+## (선택) 채팅에 Claude 연결
+
+채팅창에 직접 쓴 질문을 Claude가 상황(목표·계획·경로)을 보고 반말로 대답한다.
+없으면 내장 대답(키워드 매칭 + 여러 말투)으로 동작한다.
+
+1. Python 3.10 이상에서 `pip install -r requirements.txt`
+2. `.env`에 `ANTHROPIC_API_KEY=...` 추가 (console.anthropic.com 에서 발급, 사용량만큼 과금)
+3. `python3 server.py` 다시 실행 → 시작 메시지에 "Claude 채팅 켜짐"
+
+모델은 `claude-opus-5-5` (effort low), 바꾸려면 `.env`에 `CLAUDE_MODEL=...`.
+
 ## 구조
 
 - `index.html`: 화면 전부 (목표 카드 · 에이전트 · 다이얼 · 경로 · 실시간 열차)

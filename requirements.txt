@@ -1,0 +1,1 @@
+anthropic>=1.0  # 채팅에 Claude 연결할 때만 필요 (Python 3.10+)
