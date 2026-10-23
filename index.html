@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>잔소리역</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/galmuri@2.40.3/dist/galmuri.css" rel="stylesheet">
 <style>
 /* 스티커 느낌: 굵은 테두리 + 딱딱한 그림자 + 형광 포인트 */
 :root{
@@ -19,24 +19,23 @@
     --bg:#0e0e0e; --card:#1a1a1a; --ink:#f3efe6; --muted:#a19c90; --line:#f3efe6; --soft:#2c2c2c;
     --free:#b8f03f; --prep:#ff7ab8; --travel:#8c7cff; --late:#ff6a4d; --ok:#3ddc97;
     --chip:#1a1a1a; --me:#f3efe6; --meInk:#0e0e0e; --goal:#1a1a1a; --goalInk:#f3efe6; --goalMuted:#a19c90;
-    --shadow:#c8f560;
+    --shadow:#3a3a3a;
   }
 }
 :root[data-theme="dark"]{
   --bg:#0e0e0e; --card:#1a1a1a; --ink:#f3efe6; --muted:#a19c90; --line:#f3efe6; --soft:#2c2c2c;
   --free:#b8f03f; --prep:#ff7ab8; --travel:#8c7cff; --late:#ff6a4d; --ok:#3ddc97;
   --chip:#1a1a1a; --me:#f3efe6; --meInk:#0e0e0e; --goal:#1a1a1a; --goalInk:#f3efe6; --goalMuted:#a19c90;
-  --shadow:#c8f560;
+  --shadow:#3a3a3a;
 }
 *{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--ink);font-family:"Noto Sans KR",system-ui,sans-serif;line-height:1.5}
-.mono,.clock,.route .t,.trains .eta{font-family:"Space Mono",ui-monospace,monospace;font-variant-numeric:tabular-nums}
+svg text{font-family:"Galmuri11",sans-serif}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Galmuri11",system-ui,sans-serif;line-height:1.5}
+.mono,.clock,.route .t,.trains .eta{font-family:"GalmuriMono11","Galmuri11",monospace;font-variant-numeric:tabular-nums}
 main{max-width:480px;margin:0 auto;padding:18px 16px 56px}
 header{display:flex;align-items:center;gap:10px}
 .brand{flex:1;min-width:0}
-h1{font-size:26px;margin:0;font-weight:900;letter-spacing:-.05em;line-height:1.1;display:inline;background:linear-gradient(transparent 58%,var(--accent) 58%);color:var(--ink)}
-@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]) h1{background:none;color:var(--accent)} }
-:root[data-theme="dark"] h1{background:none;color:var(--accent)}
+h1{font-size:26px;margin:0;font-weight:700;line-height:1.1;display:inline;color:var(--ink)}
 .tagline{font-size:12px;color:var(--muted);margin:4px 0 0}
 .clock{font-size:15px;font-weight:700}
 .icon{border:2px solid var(--line);background:var(--card);color:var(--ink);border-radius:12px;width:40px;height:40px;font-size:18px;cursor:pointer;padding:0;flex:none;box-shadow:3px 3px 0 var(--shadow)}
@@ -53,7 +52,7 @@ button:active{transform:translate(2px,2px);box-shadow:0 0 0 var(--shadow)}
 /* 목표 카드 */
 .goal{background:var(--goal);color:var(--goalInk);border-radius:24px;padding:18px;margin-bottom:18px;border:2px solid var(--line);box-shadow:5px 5px 0 var(--accent)}
 .goal-label{display:inline-block;font-size:11px;font-weight:700;letter-spacing:.08em;background:var(--accent);color:var(--accentInk);padding:2px 8px;border-radius:999px}
-.goal-head{font-size:26px;font-weight:900;margin:6px 0 14px;letter-spacing:-.04em;line-height:1.2}
+.goal-head{font-size:26px;font-weight:700;margin:6px 0 14px;letter-spacing:-.04em;line-height:1.2}
 .goal-head .empty{color:var(--goalMuted)}
 .stations{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);gap:6px;align-items:stretch}
 .field{display:block;min-width:0;overflow:hidden;text-align:left;border-radius:16px;border:1.5px solid rgba(255,255,255,.18);background:rgba(255,255,255,.06);color:var(--goalInk);padding:10px 12px;width:100%;min-height:62px;box-shadow:none;font-weight:400}
@@ -62,7 +61,7 @@ button:active{transform:translate(2px,2px);box-shadow:0 0 0 var(--shadow)}
 .field .v.empty{color:var(--goalMuted);font-weight:500}
 .swap{align-self:center;background:var(--accent);color:var(--accentInk);border-color:var(--accent);width:36px;height:36px;padding:0;box-shadow:none}
 .goal-row{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px}
-.field input[type=time]{font:inherit;font-family:"Space Mono",monospace;font-size:16px;font-weight:700;background:transparent;border:none;color:var(--goalInk);padding:0;width:100%;color-scheme:dark}
+.field input[type=time]{font:inherit;font-family:"GalmuriMono11","Galmuri11",monospace;font-size:16px;font-weight:700;background:transparent;border:none;color:var(--goalInk);padding:0;width:100%;color-scheme:dark}
 .stepper{display:flex;align-items:center;gap:6px}
 .stepper button{background:transparent;color:var(--goalInk);border:1.5px solid rgba(255,255,255,.3);width:30px;height:30px;padding:0;line-height:1;flex:none;box-shadow:none}
 .stepper .v{flex:1;text-align:center}
@@ -77,7 +76,7 @@ button:active{transform:translate(2px,2px);box-shadow:0 0 0 var(--shadow)}
 .avatar{flex:none;width:96px}
 .avatar svg{display:block;width:100%;height:auto}
 .abody{min-width:0}
-.aname{font-size:12px;font-weight:900;color:var(--muted);margin:0 0 4px 2px}
+.aname{font-size:12px;font-weight:700;color:var(--muted);margin:0 0 4px 2px}
 .arow .msg{max-width:none;animation:none}
 .avatar .lid{opacity:0}
 .feed .arow:last-child .avatar .lid{animation:lid 4.2s steps(1,end) infinite}
@@ -89,17 +88,17 @@ button:active{transform:translate(2px,2px);box-shadow:0 0 0 var(--shadow)}
 .msg.agent.urgent{box-shadow:4px 4px 0 var(--travel)}
 .msg.agent.late{box-shadow:4px 4px 0 var(--late)}
 .msg.me{background:var(--me);color:var(--meInk);align-self:flex-end;border-top-right-radius:6px;font-size:14.5px;font-weight:700}
-.msg b{display:block;font-size:19px;font-weight:900;letter-spacing:-.02em;margin-bottom:2px}
-.msg .time{display:block;font-size:11px;color:var(--muted);margin-top:4px;font-family:"Space Mono",monospace}
+.msg b{display:block;font-size:19px;font-weight:700;letter-spacing:-.02em;margin-bottom:2px}
+.msg .time{display:block;font-size:11px;color:var(--muted);margin-top:4px;font-family:"GalmuriMono11","Galmuri11",monospace}
 @keyframes pop{from{opacity:0;transform:translateY(6px) rotate(-1deg)}to{opacity:1;transform:none}}
-.ask{width:100%;padding:16px;font-size:19px;font-weight:900;letter-spacing:-.02em;background:var(--accent);color:var(--accentInk);border:2px solid var(--line);border-radius:18px;box-shadow:5px 5px 0 var(--shadow)}
+.ask{width:100%;padding:16px;font-size:19px;font-weight:700;letter-spacing:-.02em;background:var(--accent);color:var(--accentInk);border:2px solid var(--line);border-radius:18px;box-shadow:5px 5px 0 var(--shadow)}
 @media (prefers-color-scheme: dark){ :root:not([data-theme="light"]) .ask{box-shadow:5px 5px 0 var(--prep)} }
 :root[data-theme="dark"] .ask{box-shadow:5px 5px 0 var(--prep)}
 .ask:active{transform:translate(4px,4px);box-shadow:1px 1px 0 var(--shadow)}
 .chips{display:flex;gap:8px;margin:14px 0 22px;flex-wrap:wrap}
 
 .card{background:var(--card);border:2px solid var(--line);border-radius:22px;padding:18px;margin-bottom:18px;box-shadow:5px 5px 0 var(--shadow)}
-.card h2{font-size:17px;font-weight:900;letter-spacing:-.03em;margin:0 0 2px}
+.card h2{font-size:17px;font-weight:700;letter-spacing:-.03em;margin:0 0 2px}
 body:not(.ready) .needgoal{display:none !important}
 /* 목표 정하기 전: 카드는 보여주고 뭐가 나올지만 안내 */
 .ghost{display:none;margin:12px 0 0;padding:14px;border:2px dashed var(--soft);border-radius:14px;color:var(--muted);font-size:14px;align-self:stretch}
@@ -110,8 +109,11 @@ body:not(.ready) .card.preview > :not(h2):not(.ghost){display:none !important}
 /* 다이얼 */
 .dialwrap{display:flex;flex-direction:column;align-items:center}
 .dialwrap h2,.dialwrap .hint{align-self:flex-start}
+.dialhead{align-self:stretch;display:flex;justify-content:space-between;align-items:center;gap:8px}
+button.mini{font-size:12px;padding:3px 8px}
+button.mini[aria-pressed="true"]{background:var(--accent);color:var(--accentInk)}
 svg.dial{width:100%;max-width:280px;overflow:visible;touch-action:none;cursor:grab;user-select:none;margin-top:6px}
-.center-big{font-size:19px;font-weight:900;fill:var(--ink)}
+.center-big{font-size:19px;font-weight:700;fill:var(--ink)}
 .center-sm{font-size:12px;fill:var(--muted)}
 .center-res{font-size:14px;font-weight:700}
 input[type=range]{width:100%;accent-color:var(--travel)}
@@ -122,7 +124,7 @@ input[type=range]{width:100%;accent-color:var(--travel)}
 /* 경로 */
 .route{list-style:none;margin:12px 0 0;padding:0;position:relative}
 .runner{position:absolute;width:32px;height:32px;z-index:2;pointer-events:none}
-.runner svg{display:block;width:100%;height:100%}
+.runner svg{display:block;width:100%;height:100%;animation:float 1.8s steps(1,end) infinite}
 .runner .fb,.avatars .fb{opacity:0}
 .avatars{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
 .avatars button{display:flex;flex-direction:column;align-items:center;gap:4px;padding:8px 2px;font-size:11px;font-weight:700;background:var(--card)}
@@ -143,7 +145,7 @@ input[type=range]{width:100%;accent-color:var(--travel)}
 .route .xfer .what{font-weight:700}
 .route .xfer .what > :first-child,.route .xfer .what{color:var(--ink)}
 .route .xfer .what{background:color-mix(in srgb,var(--prep) 30%,transparent);border-radius:10px;padding:4px 8px;margin:-4px 0 8px -8px}
-.route .verdict{font-weight:900}
+.route .verdict{font-weight:700}
 
 /* 실시간 열차 */
 svg.strip{width:100%;height:auto;display:block;margin-top:6px;overflow:visible}
@@ -161,7 +163,7 @@ svg.strip{width:100%;height:auto;display:block;margin-top:6px;overflow:visible}
 .tr.mine .hand-b{animation:handB 1.4s steps(1,end) infinite}
 @keyframes handA{0%{opacity:1}50%{opacity:0}}
 @keyframes handB{0%{opacity:0}50%{opacity:1}}
-@media (prefers-reduced-motion: reduce){ .tr .float,.tr .lid,.tr .hand-a,.tr .hand-b,.source.live i,.feed .avatar .lid,.typing i,.runner .fa,.runner .fb{animation:none} }
+@media (prefers-reduced-motion: reduce){ .tr .float,.tr .lid,.tr .hand-a,.tr .hand-b,.source.live i,.feed .avatar .lid,.typing i,.runner .fa,.runner .fb,.runner svg{animation:none} }
 .trains{list-style:none;margin:10px 0 0;padding:0;font-size:13.5px}
 .trains li{display:flex;gap:10px;align-items:baseline;padding:7px 8px;border-radius:10px}
 .trains .eta{font-weight:700;min-width:46px}
@@ -172,14 +174,14 @@ svg.strip{width:100%;height:auto;display:block;margin-top:6px;overflow:visible}
 dialog{border:2px solid var(--line);border-radius:22px;padding:0;width:min(440px,calc(100% - 24px));max-height:86vh;background:var(--card);color:var(--ink);box-shadow:6px 6px 0 var(--shadow)}
 dialog::backdrop{background:rgba(0,0,0,.5)}
 .sheet{padding:18px}
-.sheet h2{margin:0 0 4px;font-size:20px;font-weight:900;letter-spacing:-.03em}
+.sheet h2{margin:0 0 4px;font-size:20px;font-weight:700;letter-spacing:-.03em}
 .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:14px}
 label{display:block;font-size:12.5px;color:var(--muted);margin-bottom:4px}
 .sheet input,.sheet select{font:inherit;width:100%;padding:10px 12px;border-radius:12px;border:2px solid var(--line);background:var(--bg);color:var(--ink)}
 .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:14px}
 .pill{font-size:12px;padding:4px 10px;border-radius:999px;background:var(--soft);color:var(--muted)}
 .pill.on{background:var(--ok);color:#fff}
-.save{width:100%;margin-top:16px;padding:14px;background:var(--accent);color:var(--accentInk);border-radius:14px;font-weight:900}
+.save{width:100%;margin-top:16px;padding:14px;background:var(--accent);color:var(--accentInk);border-radius:14px;font-weight:700}
 details{margin-top:14px}
 details summary{cursor:pointer;color:var(--muted);font-size:13px}
 .list{list-style:none;margin:10px 0 0;padding:0;max-height:52vh;overflow:auto}
@@ -196,17 +198,12 @@ details summary{cursor:pointer;color:var(--muted);font-size:13px}
 .goal-label{border-radius:0}
 .swap,.example{border-image:var(--pxb) 2 / 6px / 0 stretch}
 .card,dialog{filter:drop-shadow(5px 5px 0 var(--shadow))}
-.goal{filter:drop-shadow(5px 5px 0 var(--accent))}
+.goal{filter:drop-shadow(5px 5px 0 var(--shadow))}
 button:not([data-st]):not(.swap):not(.example){filter:drop-shadow(3px 3px 0 var(--shadow))}
 .goal button,.stepper button{filter:none}
 .ask{filter:drop-shadow(5px 5px 0 var(--shadow))}
-@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]) .ask{filter:drop-shadow(5px 5px 0 var(--prep))} }
-:root[data-theme="dark"] .ask{filter:drop-shadow(5px 5px 0 var(--prep))}
 button:not([data-st]):active{transform:translate(3px,3px);filter:none}
-.msg.agent{filter:drop-shadow(4px 4px 0 var(--free))}
-.msg.agent.warn{filter:drop-shadow(4px 4px 0 var(--prep))}
-.msg.agent.urgent{filter:drop-shadow(4px 4px 0 var(--travel))}
-.msg.agent.late{filter:drop-shadow(4px 4px 0 var(--late))}
+.msg.agent{filter:drop-shadow(4px 4px 0 var(--shadow))}
 .route .xfer .what{border-image:var(--pxb-soft) 2 / 6px / 0 stretch;padding:2px 6px;margin:-8px 0 6px -12px}
 .trains li.mine{border-image:var(--pxb) 2 / 6px / 0 stretch}
 .ghost{border-image:var(--pxb) 2 / 6px / 0 stretch;opacity:.8}
@@ -254,7 +251,7 @@ button:not([data-st]):active{transform:translate(3px,3px);filter:none}
 
   <!-- 3. 돌려보기 -->
   <section class="card dialwrap preview">
-    <h2>돌려봐</h2>
+    <div class="dialhead"><h2>돌려봐</h2><button type="button" class="mini" id="moreLate" aria-pressed="false">더 늦을지도;</button></div>
     <p class="ghost">목표 정하면 여기서 "10분 뒤에 나가면 몇 분 늦는지" 돌려볼 수 있어.</p>
     <p class="hint">언제 나가면 목표 시간에 맞는지 바로 보여줄게.</p>
     <svg class="dial" id="dial" viewBox="0 0 300 300" role="img" aria-label="출발 시각 다이얼"></svg>
@@ -280,7 +277,7 @@ button:not([data-st]):active{transform:translate(3px,3px);filter:none}
     <h2 id="liveTitle">지금 오는 열차</h2>
     <p class="ghost">목표 정하면 네가 탈 역으로 오는 열차를 보여줄게.</p>
     <p class="hint" id="liveHint"></p>
-    <svg class="strip" id="strip" viewBox="0 0 340 180" role="img" aria-label="다가오는 열차 위치"></svg>
+    <svg class="strip" id="strip" viewBox="0 0 340 204" role="img" aria-label="다가오는 열차 위치"></svg>
     <ul class="trains" id="trains"></ul>
   </section>
 </main>
@@ -684,6 +681,7 @@ $("fromBtn").addEventListener("click", ()=>openPicker("from"));
 $("toBtn").addEventListener("click", ()=>openPicker("to"));
 
 // ---- 다이얼 ----
+let dialExt = false;
 const CX=150, CY=150, R=104;
 function polar(deg, r=R){ const a=(deg-90)*Math.PI/180; return [CX+r*Math.cos(a), CY+r*Math.sin(a)]; }
 function arc(d0, d1){
@@ -693,7 +691,7 @@ function arc(d0, d1){
 }
 function drawDial(p){
   const t = now();
-  const W = Math.max(15, Math.min(180, Math.ceil((p.target - t)/MIN)));
+  const W = Math.max(15, Math.min(dialExt ? 180 : 60, Math.ceil((p.target - t)/MIN)));   // 기본 60분까지, '더 늦을지도;' 켜면 3시간
   const deg = ms => (ms - t)/MIN / W * 360;
   $("offset").max = W;
   const r = simulate(leaveNow() + selOffset*MIN), sl = slackOf(r, p.target);
@@ -734,6 +732,13 @@ $("dial").addEventListener("pointerdown", e=>{dragging=true; $("dial").setPointe
 $("dial").addEventListener("pointermove", e=>{ if(dragging) setOffsetFromPointer(e); });
 $("dial").addEventListener("pointerup", ()=>dragging=false);
 $("offset").addEventListener("input", e=>{ selOffset = Number(e.target.value); drawDial(plan()); });
+$("moreLate").addEventListener("click", e=>{
+  dialExt = !dialExt;
+  e.currentTarget.textContent = dialExt ? "60분까지만" : "더 늦을지도;";
+  e.currentTarget.setAttribute("aria-pressed", dialExt);
+  if(!dialExt) selOffset = Math.min(selOffset, 60);
+  $("offset").value = selOffset; drawDial(plan());
+});
 
 // ---- 경로 ----
 // 지금 따라가는 여정: GPS로 집을 나온 걸 봤으면 그때 출발한 실제 여정, 아니면 계획(지났으면 '지금 나가면')
@@ -970,7 +975,7 @@ function trainChar(color, mood, bubble){
       <g transform="translate(${-PX_W/2*PX} ${-PX_H*PX + 2}) scale(${PX})" shape-rendering="crispEdges">${body}</g>
       <rect x="${-bw/2}" y="${by}" width="${bw}" height="20" rx="3" fill="${bfill}" stroke="var(--line)" stroke-width="2"/>
       <rect x="-3" y="${by+19}" width="6" height="3" fill="${bfill}" shape-rendering="crispEdges"/><rect x="-1.5" y="${by+21}" width="3" height="3" fill="var(--line)" shape-rendering="crispEdges"/>
-      <text x="0" y="${by+14.5}" text-anchor="middle" font-size="11.5" font-weight="900" fill="${mood === "mine" ? "#111" : "var(--ink)"}">${bubble}</text>
+      <text x="0" y="${by+14.5}" text-anchor="middle" font-size="11.5" font-weight="700" fill="${mood === "mine" ? "#111" : "var(--ink)"}">${bubble}</text>
     </g>`;
 }
 // 몇 정거장 전(k)인지 → 화면 위치. 역에 도착하면 잠깐 서 있다가(정차) 다음 역으로 감.
@@ -997,6 +1002,23 @@ function stepTrains(){
 }
 setInterval(stepTrains, 1000);
 
+// 픽셀 폭발 말풍선: 뾰족뾰족한 모양을 칸 단위로 찍음 (빨간 테두리 + 연두 바탕 + 검은 글씨)
+function burstSvg(label, cx, cy){
+  const u = 3, W = 38, H = 22, N = 12, cells = [];
+  const inside = (x, y) => {
+    const dx = (x + .5 - W/2) / (W/2), dy = (y + .5 - H/2) / (H/2), a = Math.atan2(dy, dx);
+    const spike = Math.abs((((a / (2*Math.PI)) * N % 1) + 1) % 1 * 2 - 1);   // 0~1 뾰족
+    return Math.hypot(dx, dy) < .74 + .26 * spike;
+  };
+  for(let y = 0; y < H; y++) for(let x = 0; x < W; x++){
+    if(!inside(x, y)) continue;
+    const edge = !inside(x-1, y) || !inside(x+1, y) || !inside(x, y-1) || !inside(x, y+1);
+    const edge2 = !edge && (!inside(x-2, y) || !inside(x+2, y) || !inside(x, y-2) || !inside(x, y+2));
+    cells.push(`<rect x="${x*u}" y="${y*u}" width="${u+.1}" height="${u+.1}" fill="${edge ? "#e5322d" : edge2 ? "#111" : "var(--accent)"}"/>`);
+  }
+  return `<g transform="translate(${cx - W*u/2} ${cy - H*u/2})" shape-rendering="crispEdges">${cells.join("")}
+    <text x="${W*u/2}" y="${H*u/2 + 4.5}" text-anchor="middle" font-size="12" font-weight="700" fill="#111">${label}</text></g>`;
+}
 function renderLive(p){
   const t = now(), past = t > p.leave;
   const trip = currentTrip(p), leg = trip.sim.legs[0], m = meta(leg.l);
@@ -1008,9 +1030,8 @@ function renderLive(p){
     const n = nameOf(id), x = xOf(k);
     if(k === 0){
       svg += `<circle cx="${x}" cy="${y}" r="9" fill="var(--accent)" stroke="var(--line)" stroke-width="2.5"/>`;
-      const short = n.length>5 ? n.slice(0,4)+"…" : n, w = ([...short].length + 3)*12 + 16;
-      svg += `<g transform="rotate(-4 ${x} ${y+42})"><rect x="${Math.min(x - w/2, 336 - w)}" y="${y+30}" width="${w}" height="24" rx="8" fill="var(--accent)" stroke="var(--line)" stroke-width="2"/>`;
-      svg += `<text x="${Math.min(x, 336 - w/2)}" y="${y+46.5}" text-anchor="middle" font-size="12" font-weight="900" fill="#111">여기! ${short}</text></g>`;
+      const short = n.length>5 ? n.slice(0,4)+"…" : n;
+      svg += burstSvg(`여기! ${short}`, Math.min(x - 18, 340 - 62), y + 54);
     } else {
       svg += `<circle cx="${x}" cy="${y}" r="5.5" fill="var(--card)" stroke="var(--line)" stroke-width="2"/>`;
       svg += `<text x="${x}" y="${y+22}" text-anchor="middle" font-size="10" fill="var(--muted)">${n.length>5?n.slice(0,4)+"…":n}</text>`;
@@ -1045,7 +1066,7 @@ function renderLive(p){
   const list = info.map(({tr, mm, mine, can}) =>
     `<li class="${mine?"mine":can?"":"gone"}"><span class="eta">${mm < 0.5 ? "곧" : dur(Math.ceil(mm))}</span><span>${when(tr.at)}${tr.guess ? " (추정)" : ""}${tr.dest ? ` · ${tr.dest}행` : ""}${tr.express ? " · 급행" : ""}${tr.last ? " · 막차" : ""}${tr.msg ? ` · ${tr.msg}` : ""}${mine ? " ← 이거 타" : can ? "" : tr.short ? ` (${tr.dest}까지만 가. ${leg.to} 안 가)` : " (못 타)"}</span></li>`);
   const myWait = Math.ceil((leg.board - t)/MIN);
-  svg += `<text x="4" y="172" font-size="12.5" fill="var(--ink)" font-weight="700">${mineShown
+  svg += `<text x="4" y="196" font-size="12.5" fill="var(--ink)" font-weight="700">${mineShown
     ? "\"나 타!\" 하는 애가 네 열차야. 놓치지 마."
     : `네 열차는 ${when(leg.board)} (${dur(myWait)} 뒤). 아직 저 멀리 있어.`}</text>`;
   $("strip").innerHTML = svg;
