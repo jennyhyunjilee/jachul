@@ -98,8 +98,8 @@ body:not(.ready) .card.preview > :not(h2):not(.ghost){display:none !important}
 .dialwrap{display:flex;flex-direction:column;align-items:center}
 .dialwrap h2,.dialwrap .hint{align-self:flex-start}
 svg.dial{width:100%;max-width:280px;overflow:visible;touch-action:none;cursor:grab;user-select:none;margin-top:6px}
-.center-big{font-size:19px;font-weight:900;fill:var(--ink)}
-.center-sm{font-size:12px;fill:var(--muted)}
+.center-big{font-size:17px;font-weight:900;fill:var(--ink)}
+.center-sm{font-size:11.5px;fill:var(--muted)}
 .center-res{font-size:14px;font-weight:700}
 input[type=range]{width:100%;accent-color:var(--travel)}
 .legend{display:flex;gap:14px;font-size:12px;color:var(--muted);margin-top:6px}
@@ -128,6 +128,11 @@ svg.strip{width:100%;height:auto;display:block;margin-top:6px;overflow:visible}
 .tr .lid{opacity:0;animation:lid 4.2s steps(1,end) infinite}
 @keyframes lid{0%{opacity:0}94%{opacity:1}98%{opacity:0}}
 .tr .hand-b{opacity:0}
+/* 역 도착 리액션: 입 벌리고 볼 발그레 */
+.tr .mouth-open,.tr .cheeks{display:none}
+.tr.stopped .mouth-smile{display:none}
+.tr.stopped .mouth-open,.tr.stopped .cheeks{display:inline}
+.center-goal{font-size:11px;fill:var(--muted)}
 .tr.mine .hand-a{animation:handA 1.4s steps(1,end) infinite}
 .tr.mine .hand-b{animation:handB 1.4s steps(1,end) infinite}
 @keyframes handA{0%{opacity:1}50%{opacity:0}}
@@ -606,7 +611,14 @@ function drawDial(p){
   const r = simulate(leaveNow() + selOffset*MIN), sl = slackOf(r, p.target);
   const color = sl >= 5 ? "var(--ok)" : sl >= 0 ? "var(--prep)" : "var(--late)";
   const res = r.cut && sl < 0 ? `막차 끊김 · 첫차 ${hhmm(r.cut.board)}`
-    : sl >= 0 ? `${s.arrive} 목표에 ${dur(sl)} 남음` : `${s.arrive} 목표에 ${dur(-sl)} 지각`;
+    : sl >= 0 ? `${dur(sl)} 남음` : `${dur(-sl)} 지각`;
+  // 가운데 캐릭터: 여유 있으면 웃으며 둥실, 빠듯하면 웃지만 가만히, 늦으면 입 벌리고 놀람, 막차 끊기면 눈 감음
+  const face = r.cut && sl < 0 ? {mood:"gone", mouth:"open", cls:""}
+    : sl >= 5 ? {mood:"can", mouth:"smile", cls:"moving"}
+    : sl >= 0 ? {mood:"can", mouth:"smile", cls:""}
+    : {mood:"can", mouth:"open", cls:""};
+  const DS = 2, lineC = meta(r.legs[0].l).c;
+  const dialChar = `<g class="tr dialchar ${face.cls}" transform="translate(${CX} ${CY-6})"><g class="float"><g transform="translate(${-PX_W/2*DS} ${-PX_H*DS}) scale(${DS})" shape-rendering="crispEdges">${trainBody(lineC, face.mood, face.mouth)}</g></g></g>`;
   const [kx,ky] = polar(selOffset / W * 360);
   const ticks = [0,.25,.5,.75].map(f=>{
     // 좌우 눈금은 원 바깥쪽으로 붙여서 링이랑 안 겹치게
@@ -624,11 +636,11 @@ function drawDial(p){
     <path d="${arc(deg(p.leave), deg(p.target))}" stroke="var(--travel)" stroke-width="18" fill="none"/>
     ${ticks}
     <circle cx="${kx}" cy="${ky}" r="14" fill="var(--accent)" stroke="var(--ink)" stroke-width="3"/>
-    ${selOffset < 60
-      ? `<text x="${CX}" y="${CY-20}" text-anchor="middle" class="center-big">${selOffset===0 ? "지금 나가면" : selOffset+"분 뒤에 나가면"}</text>`
-      : `<text x="${CX}" y="${CY-40}" text-anchor="middle" class="center-big">${dur(selOffset)} 뒤에</text><text x="${CX}" y="${CY-18}" text-anchor="middle" class="center-big">나가면</text>`}
-    <text x="${CX}" y="${CY+4}" text-anchor="middle" class="center-sm">${hhmm(r.legs[0].board)} 열차 · ${hhmm(r.arrive)} 도착</text>
-    <text x="${CX}" y="${CY+30}" text-anchor="middle" class="center-res" fill="${color}">${res}</text>`;
+    ${dialChar}
+    <text x="${CX}" y="${CY+14}" text-anchor="middle" class="center-big" style="${selOffset >= 60 ? "font-size:15px" : ""}">${selOffset===0 ? "지금 나가면" : dur(selOffset)+" 뒤에 나가면"}</text>
+    <text x="${CX}" y="${CY+32}" text-anchor="middle" class="center-sm">${hhmm(r.legs[0].board)} 열차 · ${hhmm(r.arrive)} 도착</text>
+    <text x="${CX}" y="${CY+51}" text-anchor="middle" class="center-res" fill="${color}">${res}</text>
+    <text x="${CX}" y="${CY+67}" text-anchor="middle" class="center-goal">목표 ${s.arrive}</text>`;
 }
 function setOffsetFromPointer(e){
   const box = $("dial").getBoundingClientRect();
@@ -678,7 +690,7 @@ function upstream(leg, n){
   return out;
 }
 // ---- 픽셀 열차 캐릭터 (32×25칸). 그리드에 도형을 찍어서 만듦. L = 노선색 (행선판·띠) ----
-const PX_COLOR = {k:"#111",d:"#7d7d7d",w:"#f6f5ef",s:"#b3b3b3",g:"#d2d2d2",e:"#fff",y:"#ffe14a",h:"#efeee8",n:"#555"};
+const PX_COLOR = {r:"#b8323a",p:"#ff8ac2",k:"#111",d:"#7d7d7d",w:"#f6f5ef",s:"#b3b3b3",g:"#d2d2d2",e:"#fff",y:"#ffe14a",h:"#efeee8",n:"#555"};
 const PX = 1.35, PX_W = 32, PX_H = 25; // 캐릭터 약 43×34
 // 눈: 까만 테두리 + 큰 흰 눈동자 + 아래 웃는 하이라이트
 const EYE = ["..kkkk..", ".kkkkkk.", "kkeeeekk", "kkeeeekk", "kkeeeekk", "kkkeekkk", "kwkkkkwk", ".kwwwwk.", "..kkkk.."];
@@ -709,7 +721,6 @@ function trainRows(mood){
   box(10, 4, 21, 8, "L", 0);          // 행선판
   if(mood === "gone") closedEyes(put, rect);
   else { stamp(EYE, 6, 9); stamp(EYE, 18, 9); }
-  put(14, 15, "k"); put(17, 15, "k"); rect(15, 16, 2, 1, "k");   // 입
   rect(4, 18, 24, 3, "L");            // 노선색 띠
   for(const x0 of [6, 21]){ rect(x0, 18, 5, 3, "n"); rect(x0+1, 18, 3, 3, mood === "gone" ? "s" : "y"); }  // 전조등 (못 타면 꺼짐)
   rect(4, 21, 24, 1, "w");
@@ -718,6 +729,10 @@ function trainRows(mood){
   if(mood !== "mine") stamp(HAND_R, 29, 15);         // 내 열차는 오른손을 따로 그려서 흔듦
   return g.map(row => row.join(""));
 }
+// 입 모양: 웃는 입 ‿, 벌린 입 O (역 도착·놀람), 도착하면 볼이 발그레
+const MOUTH_SMILE = t => { t.put(14, 15, "k"); t.put(17, 15, "k"); t.rect(15, 16, 2, 1, "k"); };
+const MOUTH_OPEN = t => { t.rect(15, 14, 2, 1, "k"); t.put(14, 15, "k"); t.put(17, 15, "k"); t.rect(15, 15, 2, 2, "r"); t.put(14, 16, "k"); t.put(17, 16, "k"); t.rect(15, 17, 2, 1, "k"); };
+const CHEEKS = t => { t.rect(4, 15, 2, 2, "p"); t.rect(26, 15, 2, 2, "p"); };
 function overlayRows(draw){ const t = pxGrid(); draw(t); return t.g.map(row => row.join("")); }
 function pxRects(rows, color){
   let out = "";
@@ -731,10 +746,16 @@ function pxRects(rows, color){
   });
   return out;
 }
+function trainBody(color, mood, mouth = "auto"){
+  const ov = draw => pxRects(overlayRows(draw), color);
+  return pxRects(trainRows(mood), color)
+    + (mood !== "gone" ? `<g class="lid">${ov(t => closedEyes(t.put, t.rect))}</g>` : "")
+    + (mood === "mine" ? `<g class="hand-a">${ov(t => t.stamp(HAND_R, 29, 15))}</g><g class="hand-b">${ov(t => t.stamp(HAND_R, 29, 9))}</g>` : "")
+    + (mouth === "open" ? ov(MOUTH_OPEN) : mouth === "smile" ? ov(MOUTH_SMILE)
+      : `<g class="mouth-smile">${ov(MOUTH_SMILE)}</g><g class="mouth-open">${ov(MOUTH_OPEN)}</g><g class="cheeks">${ov(CHEEKS)}</g>`);
+}
 function trainChar(color, mood, bubble){
-  const body = pxRects(trainRows(mood), color)
-    + (mood !== "gone" ? `<g class="lid">${pxRects(overlayRows(t => closedEyes(t.put, t.rect)), color)}</g>` : "")
-    + (mood === "mine" ? `<g class="hand-a">${pxRects(overlayRows(t => t.stamp(HAND_R, 29, 15)), color)}</g><g class="hand-b">${pxRects(overlayRows(t => t.stamp(HAND_R, 29, 9)), color)}</g>` : "");
+  const body = trainBody(color, mood);
   const bw = [...bubble].length*10.5 + 16, by = -64;
   const bfill = mood === "mine" ? "var(--accent)" : mood === "can" ? "var(--card)" : "var(--soft)";
   return `<g class="float">
@@ -762,6 +783,7 @@ function stepTrains(){
     const k = (Number(g.dataset.at) - t)/MIN / LIVE_ANIM.ride, {pos, moving} = trackPos(k);
     g.setAttribute("transform", `translate(${Math.round(LIVE_ANIM.xOf(pos))} ${LIVE_ANIM.y})`);
     g.classList.toggle("moving", moving);
+    g.classList.toggle("stopped", !moving);
     g.style.display = pos > LIVE_ANIM.max ? "none" : "";
   });
 }
