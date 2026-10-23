@@ -122,14 +122,17 @@ input[type=range]{width:100%;accent-color:var(--travel)}
 
 /* 실시간 열차 */
 svg.strip{width:100%;height:auto;display:block;margin-top:6px;overflow:visible}
-.bob{animation:bob .8s ease-in-out infinite;transform-box:fill-box;transform-origin:center bottom}
-.bob.mine{animation-duration:.5s}
-.blink{animation:blink 3.4s infinite;transform-box:fill-box;transform-origin:center}
-.wiggle{animation:wiggle 1.2s ease-in-out infinite;transform-box:fill-box;transform-origin:center bottom}
-@keyframes bob{50%{transform:translateY(-2.5px)}}
-@keyframes blink{0%,93%,100%{transform:scaleY(1)}96%{transform:scaleY(.1)}}
-@keyframes wiggle{0%,100%{transform:rotate(-4deg)}50%{transform:rotate(4deg)}}
-@media (prefers-reduced-motion: reduce){ .bob,.blink,.wiggle,.source.live i{animation:none} }
+/* 픽셀 열차: 부드럽게 말고 steps로 뚝뚝, 느릿하게 둥실. 역에 서 있을 땐(.moving 없음) 멈춤 */
+.tr.moving .float{animation:float 1.8s steps(1,end) infinite}
+@keyframes float{0%{transform:translateY(0)}50%{transform:translateY(-3px)}}
+.tr .lid{opacity:0;animation:lid 4.2s steps(1,end) infinite}
+@keyframes lid{0%{opacity:0}94%{opacity:1}98%{opacity:0}}
+.tr .hand-b{opacity:0}
+.tr.mine .hand-a{animation:handA 1.4s steps(1,end) infinite}
+.tr.mine .hand-b{animation:handB 1.4s steps(1,end) infinite}
+@keyframes handA{0%{opacity:1}50%{opacity:0}}
+@keyframes handB{0%{opacity:0}50%{opacity:1}}
+@media (prefers-reduced-motion: reduce){ .tr .float,.tr .lid,.tr .hand-a,.tr .hand-b,.source.live i{animation:none} }
 .trains{list-style:none;margin:10px 0 0;padding:0;font-size:13.5px}
 .trains li{display:flex;gap:10px;align-items:baseline;padding:7px 8px;border-radius:10px}
 .trains .eta{font-weight:700;min-width:46px}
@@ -460,6 +463,8 @@ function plan(){
   }
   return {target, leave:L, prepStart:L - s.prep*MIN, sim:simulate(L)};
 }
+// "지금 나가면"의 기준 시각: 다음 정각 분. 경로·다이얼·열차 목록·에이전트가 다 같은 값을 씀
+const leaveNow = () => Math.ceil(now()/MIN)*MIN;
 const slackOf = (sim, target) => mins(target - sim.arrive);
 const xferText = () => route.slice(1).map(l => `${l.from}에서 ${meta(l.l).name}`).join(", ") + " 환승";
 
@@ -484,7 +489,7 @@ function judge(p, t){
   if(!p.infeasible && toPrep > 0) return {phase:"soon", level:"warn", title:"하던 거 슬슬 정리해.", body:`${toPrep}분 뒤에 준비 시작해야 ${s.arrive}까지 ${s.to} 도착해.${early}${lastTxt}`};
   if(!p.infeasible && toDep > 5) return {phase:"prep", level:lastTxt ? "urgent" : "warn", title:"지금 준비 시작해.", body:`지금 하면 안 뛰어도 돼. ${first.from} ${hhmm(first.board)} 열차${src} 타야 돼.${xf}${early}${lastTxt}`};
   if(!p.infeasible && toDep > 0) return {phase:"shoes", level:"urgent", title:"신발 신어.", body:`${toDep}분 안에 안 나가면 ${first.from} ${hhmm(first.board)} 열차${src} 놓쳐.${lastTxt}`};
-  const r = simulate(t), sl = slackOf(r, p.target);
+  const r = simulate(leaveNow()), sl = slackOf(r, p.target);
   if(r.cut && sl < 0) return {phase:"cut", level:"late", title:"막차 끊겼어.",
     body:`지금 나가도 ${r.cut.from} ${meta(r.cut.l).name}은 첫차 ${when(r.cut.board)}까지 없어. 지하철로는 ${s.to}에 ${when(r.arrive)} 도착이야. 택시 타.`};
   if(atHome) return {phase:"home", level:"late", title:"아직 집이야?", body:`지금 바로 나가. 지금 나가도 ${sl >= 0 ? sl+"분 남아" : -sl+"분 늦어"}.`};
@@ -492,7 +497,7 @@ function judge(p, t){
   return {phase:"late", level:"late", title:"너 개늦는다.", body:`지금 나가도 ${s.to}에 ${when(r.arrive)} 도착. ${s.arrive}보다 ${dur(-sl)} 늦어.${route.length>1 ? " 환승까지 치면 답 없어." : ""} 늦는다고 지금 연락해.`};
 }
 function whatIf(off){
-  const p = plan(), r = simulate(now() + off*MIN), sl = slackOf(r, p.target);
+  const p = plan(), r = simulate(leaveNow() + off*MIN), sl = slackOf(r, p.target);
   const lead = off === 0 ? "지금 나가면" : `${dur(off)} 뒤에 나가면`;
   if(r.cut && sl < 0) return {level:"late", title:"막차 끊겨. 지하철로는 못 가.",
     body:`${lead} ${r.cut.from}에서 ${meta(r.cut.l).name} 첫차 ${when(r.cut.board)}까지 기다려야 돼. ${s.to} 도착은 ${when(r.arrive)}, 목표는 ${s.arrive}.`};
@@ -598,7 +603,7 @@ function drawDial(p){
   const W = Math.max(15, Math.min(180, Math.ceil((p.target - t)/MIN)));
   const deg = ms => (ms - t)/MIN / W * 360;
   $("offset").max = W;
-  const r = simulate(t + selOffset*MIN), sl = slackOf(r, p.target);
+  const r = simulate(leaveNow() + selOffset*MIN), sl = slackOf(r, p.target);
   const color = sl >= 5 ? "var(--ok)" : sl >= 0 ? "var(--prep)" : "var(--late)";
   const res = r.cut && sl < 0 ? `막차 끊김 · 첫차 ${hhmm(r.cut.board)}`
     : sl >= 0 ? `${s.arrive} 목표에 ${dur(sl)} 남음` : `${s.arrive} 목표에 ${dur(-sl)} 지각`;
@@ -639,7 +644,7 @@ $("offset").addEventListener("input", e=>{ selOffset = Number(e.target.value); d
 
 // ---- 경로 ----
 function renderRoute(p){
-  const past = now() > p.leave, sim = past ? simulate(Math.ceil(now()/MIN)*MIN) : p.sim, sl = slackOf(sim, p.target);
+  const past = now() > p.leave, sim = past ? simulate(leaveNow()) : p.sim, sl = slackOf(sim, p.target);
   const li = (t, what, sub, dotc, seg, cls="") =>
     `<li class="${cls}"><span class="t">${t}</span><span class="rail" style="--seg:${seg};--dotc:${dotc}"><span class="dot"></span></span><span class="what">${what}${sub?`<small>${sub}</small>`:""}</span></li>`;
   const rows = [];
@@ -672,36 +677,99 @@ function upstream(leg, n){
   }
   return out;
 }
-// 열차 캐릭터: 노선색 몸통 + 창문 얼굴. mood = mine | can | gone
-function trainChar(x, y, color, mood, bubble){
-  const sc = mood === "mine" ? 1.15 : 1;
-  const eyes = mood === "gone"
-    ? `<path d="M-8 -3h5M3 -3h5" stroke="#111" stroke-width="2" stroke-linecap="round"/>`
-    : `<g class="blink"><circle cx="-5" cy="-3" r="2.2" fill="#111"/><circle cx="5" cy="-3" r="2.2" fill="#111"/></g>`;
-  const mouth = mood === "gone" ? `<path d="M-2.5 6h5" stroke="#111" stroke-width="1.8" stroke-linecap="round"/>`
-    : `<path d="M-3.5 5Q0 ${mood === "mine" ? 9.5 : 8} 3.5 5" stroke="#111" stroke-width="1.8" fill="none" stroke-linecap="round"/>`;
-  const bw = [...bubble].length*10.5 + 16;
-  const bfill = mood === "mine" ? "var(--accent)" : mood === "can" ? "var(--card)" : "var(--soft)";
-  return `<g transform="translate(${x} ${y-15}) scale(${sc})" opacity="${mood === "gone" ? .5 : 1}">
-    <g class="bob${mood === "mine" ? " mine" : ""}">
-      <g class="${mood === "mine" ? "wiggle" : ""}">
-        <rect x="${-bw/2}" y="-47" width="${bw}" height="21" rx="10.5" fill="${bfill}" stroke="var(--line)" stroke-width="1.8"/>
-        <path d="M-5 -26.5 L0 -20 L5 -26.5" fill="${bfill}" stroke="var(--line)" stroke-width="1.8" stroke-linejoin="round"/>
-        <rect x="-4.2" y="-28.5" width="8.4" height="3" fill="${bfill}"/>
-        <text x="0" y="-32.5" text-anchor="middle" font-size="11.5" font-weight="900" fill="${mood === "mine" ? "#111" : "var(--ink)"}">${bubble}</text>
-      </g>
-      <rect x="-19" y="-13" width="38" height="24" rx="10" fill="${color}" stroke="var(--line)" stroke-width="2"/>
-      <rect x="-13" y="-8.5" width="26" height="10" rx="5" fill="#fff" stroke="#111" stroke-width="1.5"/>
-      ${eyes}
-      <ellipse cx="-14" cy="4" rx="3" ry="2" fill="#ff8ac2"/><ellipse cx="14" cy="4" rx="3" ry="2" fill="#ff8ac2"/>
-      ${mouth}
-      <circle cx="-10" cy="12" r="3.6" fill="#111"/><circle cx="10" cy="12" r="3.6" fill="#111"/>
-    </g>
-  </g>`;
+// ---- 픽셀 열차 캐릭터 (32×25칸). 그리드에 도형을 찍어서 만듦. L = 노선색 (행선판·띠) ----
+const PX_COLOR = {k:"#111",d:"#7d7d7d",w:"#f6f5ef",s:"#b3b3b3",g:"#d2d2d2",e:"#fff",y:"#ffe14a",h:"#efeee8",n:"#555"};
+const PX = 1.35, PX_W = 32, PX_H = 25; // 캐릭터 약 43×34
+// 눈: 까만 테두리 + 큰 흰 눈동자 + 아래 웃는 하이라이트
+const EYE = ["..kkkk..", ".kkkkkk.", "kkeeeekk", "kkeeeekk", "kkeeeekk", "kkkeekkk", "kwkkkkwk", ".kwwwwk.", "..kkkk.."];
+const HAND_L = [".kk", "khh", "khh", "khh", "khh", ".kk"], HAND_R = ["kk.", "hhk", "hhk", "hhk", "hhk", "kk."];
+function pxGrid(){
+  const g = Array.from({length: PX_H}, () => Array(PX_W).fill("."));
+  const put = (x, y, c) => { if(x >= 0 && x < PX_W && y >= 0 && y < PX_H) g[y][x] = c; };
+  const rect = (x, y, w, h, c) => { for(let j = y; j < y+h; j++) for(let i = x; i < x+w; i++) put(i, j, c); };
+  // 모서리를 r칸씩 깎은 상자 (테두리 k)
+  const box = (x0, y0, x1, y1, fill, r) => {
+    for(let y = y0; y <= y1; y++){
+      const d = Math.max(0, r - (y - y0), r - (y1 - y));
+      for(let x = x0 + d; x <= x1 - d; x++) put(x, y, y === y0 || y === y1 || x === x0 + d || x === x1 - d ? "k" : fill);
+    }
+  };
+  const stamp = (pat, x0, y0) => pat.forEach((row, j) => [...row].forEach((c, i) => { if(c !== ".") put(x0+i, y0+j, c); }));
+  return {g, put, rect, box, stamp};
 }
+function closedEyes(put, rect){ // 감은 눈: 눈 자리 회색으로 덮고 가로줄
+  for(const x0 of [6, 18]){ rect(x0, 9, 8, 9, "g"); rect(x0+1, 13, 6, 1, "k"); put(x0, 12, "k"); put(x0+7, 12, "k"); }
+}
+function trainRows(mood){
+  const {g, put, rect, box, stamp} = pxGrid();
+  box(10, 0, 21, 4, "d", 1);          // 지붕
+  box(3, 2, 28, 22, "g", 2);          // 몸통
+  rect(5, 3, 22, 1, "w"); rect(4, 4, 1, 17, "w");   // 빛 받는 쪽
+  rect(5, 4, 22, 4, "s");             // 윗부분 짙은 회색
+  box(10, 4, 21, 8, "L", 0);          // 행선판
+  if(mood === "gone") closedEyes(put, rect);
+  else { stamp(EYE, 6, 9); stamp(EYE, 18, 9); }
+  put(14, 15, "k"); put(17, 15, "k"); rect(15, 16, 2, 1, "k");   // 입
+  rect(4, 18, 24, 3, "L");            // 노선색 띠
+  for(const x0 of [6, 21]){ rect(x0, 18, 5, 3, "n"); rect(x0+1, 18, 3, 3, mood === "gone" ? "s" : "y"); }  // 전조등 (못 타면 꺼짐)
+  rect(4, 21, 24, 1, "w");
+  rect(6, 23, 5, 2, "n"); rect(21, 23, 5, 2, "n");   // 바퀴
+  stamp(HAND_L, 0, 15);
+  if(mood !== "mine") stamp(HAND_R, 29, 15);         // 내 열차는 오른손을 따로 그려서 흔듦
+  return g.map(row => row.join(""));
+}
+function overlayRows(draw){ const t = pxGrid(); draw(t); return t.g.map(row => row.join("")); }
+function pxRects(rows, color){
+  let out = "";
+  rows.forEach((row, y) => {
+    for(let x = 0; x < row.length; ){
+      const c = row[x]; let w = 1;
+      while(row[x+w] === c) w++;
+      if(c !== ".") out += `<rect x="${x}" y="${y}" width="${w}" height="1" fill="${c === "L" ? color : PX_COLOR[c]}"/>`;
+      x += w;
+    }
+  });
+  return out;
+}
+function trainChar(color, mood, bubble){
+  const body = pxRects(trainRows(mood), color)
+    + (mood !== "gone" ? `<g class="lid">${pxRects(overlayRows(t => closedEyes(t.put, t.rect)), color)}</g>` : "")
+    + (mood === "mine" ? `<g class="hand-a">${pxRects(overlayRows(t => t.stamp(HAND_R, 29, 15)), color)}</g><g class="hand-b">${pxRects(overlayRows(t => t.stamp(HAND_R, 29, 9)), color)}</g>` : "");
+  const bw = [...bubble].length*10.5 + 16, by = -64;
+  const bfill = mood === "mine" ? "var(--accent)" : mood === "can" ? "var(--card)" : "var(--soft)";
+  return `<g class="float">
+      <g transform="translate(${-PX_W/2*PX} ${-PX_H*PX + 2}) scale(${PX})" shape-rendering="crispEdges">${body}</g>
+      <rect x="${-bw/2}" y="${by}" width="${bw}" height="20" rx="3" fill="${bfill}" stroke="var(--line)" stroke-width="2"/>
+      <rect x="-3" y="${by+19}" width="6" height="3" fill="${bfill}" shape-rendering="crispEdges"/><rect x="-1.5" y="${by+21}" width="3" height="3" fill="var(--line)" shape-rendering="crispEdges"/>
+      <text x="0" y="${by+14.5}" text-anchor="middle" font-size="11.5" font-weight="900" fill="${mood === "mine" ? "#111" : "var(--ink)"}">${bubble}</text>
+    </g>`;
+}
+// 몇 정거장 전(k)인지 → 화면 위치. 역에 도착하면 잠깐 서 있다가(정차) 다음 역으로 감.
+// 구간 (j, j+1] 중 마지막 1/4은 j+1역에 정차, 나머지 3/4 동안 j역 쪽으로 이동 → 정확히 도착 시각에 j역 도착
+function trackPos(k){
+  if(k <= 0) return {pos: 0, moving: false};
+  const j = Math.floor(k), f = k - j;
+  if(f === 0) return {pos: j, moving: false};
+  if(f > .75) return {pos: j + 1, moving: false};
+  return {pos: j + f/.75, moving: true};
+}
+let LIVE_ANIM = null;
+// 1초마다: 열차를 정수 픽셀 단위로만 옮겨서 뚝뚝 끊기듯 느릿하게. 정차 중엔 둥실거림도 멈춤
+function stepTrains(){
+  if(!LIVE_ANIM) return;
+  const t = now();
+  document.querySelectorAll("#strip .tr").forEach(g => {
+    const k = (Number(g.dataset.at) - t)/MIN / LIVE_ANIM.ride, {pos, moving} = trackPos(k);
+    g.setAttribute("transform", `translate(${Math.round(LIVE_ANIM.xOf(pos))} ${LIVE_ANIM.y})`);
+    g.classList.toggle("moving", moving);
+    g.style.display = pos > LIVE_ANIM.max ? "none" : "";
+  });
+}
+setInterval(stepTrains, 1000);
+
 function renderLive(p){
   const t = now(), past = t > p.leave;
-  const leg = (past ? simulate(t) : p.sim).legs[0], m = meta(leg.l);
+  const leg = (past ? simulate(leaveNow()) : p.sim).legs[0], m = meta(leg.l);
   const up = upstream(leg, 6), stations = [leg.ids[0], ...up];
   const x1 = 296, gap = (x1 - 28)/6, xOf = k => x1 - k*gap, y = 96;
   let svg = `<line x1="${xOf(stations.length-1)-10}" y1="${y}" x2="${x1+26}" y2="${y}" stroke="${m.c}" stroke-width="9" stroke-linecap="round"/>`;
@@ -724,14 +792,15 @@ function renderLive(p){
   for(let tt = trains.length ? trains[trains.length-1].at + 1000 : t; trains.length < 8; ){
     const last = trains[trains.length-1];
     if(trains.length >= 3 && last && last.at >= leg.board) break;
+    if(trains.length >= 4 && last && last.at > t + 30*MIN) break; // 내 열차가 한참 뒤면 목록은 짧게
     const at = nextTrain(leg, tt, true);
     trains.push({at, guess: !lv.some(x => x.at === at)});
     tt = at + 1000;
   }
-  const catchFrom = Math.max(t, p.leave) + s.walkTo*MIN;
+  const catchFrom = Math.max(leaveNow(), p.leave) + s.walkTo*MIN;
   const info = trains.map(tr => {
     const mm = (tr.at - t)/MIN, k = mm / m.ride, mine = !tr.short && tr.at === leg.board, can = !tr.short && tr.at >= catchFrom;
-    return {tr, mm, k, mine, can, x: xOf(Math.max(0, k)), mood: mine ? "mine" : can ? "can" : "gone"};
+    return {tr, mm, k, mine, can, x: xOf(trackPos(k).pos), mood: mine ? "mine" : can ? "can" : "gone"};
   });
   const mineShown = info.some(i => i.mine && i.k <= stations.length - 0.7);
   // 캐릭터: 중요한 순서(내 열차 → 탈 수 있는 열차 → 못 타는 열차)로 놓고, 이미 놓인 애랑 겹치면 뺌. 목록엔 다 나옴
@@ -740,7 +809,7 @@ function renderLive(p){
     if(placed.some(px => Math.abs(px - i.x) < 60)) continue;
     placed.push(i.x);
     const bubble = i.mine ? "나 타!" : i.can ? `${Math.max(1, Math.ceil(i.mm))}분` : i.tr.short ? "거기 안 가" : "바이~";
-    chars.unshift(trainChar(i.x, y, m.c, i.mood, bubble)); // 내 열차를 마지막에 그려서 맨 위에
+    chars.unshift(`<g class="tr ${i.mood}" data-at="${i.tr.at}">${trainChar(m.c, i.mood, bubble)}</g>`); // 내 열차를 마지막에 그려서 맨 위에
   }
   svg += chars.join("");
   const list = info.map(({tr, mm, mine, can}) =>
@@ -750,6 +819,8 @@ function renderLive(p){
     ? "\"나 타!\" 하는 애가 네 열차야. 놓치지 마."
     : `네 열차는 ${when(leg.board)} (${dur(myWait)} 뒤). 아직 저 멀리 있어.`}</text>`;
   $("strip").innerHTML = svg;
+  LIVE_ANIM = {xOf, y, ride: m.ride, max: stations.length - 0.7};
+  stepTrains();
   $("trains").innerHTML = list.join("");
   $("liveTitle").innerHTML = `${leg.from} ${badge(leg.l)} ${leg.toward}`;
   $("liveHint").textContent = lv.length ? `실시간 · ${hhmm(live.at)} 기준`
