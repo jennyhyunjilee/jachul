@@ -123,13 +123,25 @@ input[type=range]{width:100%;accent-color:var(--travel)}
 
 /* 경로 */
 .route{list-style:none;margin:12px 0 0;padding:0;position:relative}
-.runner{position:absolute;width:32px;height:32px;z-index:2;pointer-events:none}
+.runner{position:absolute;width:32px;height:32px;z-index:2;cursor:pointer}
 .runner svg{display:block;width:100%;height:100%;animation:float 1.8s steps(1,end) infinite}
 .runner .fb,.avatars .fb{opacity:0}
-.avatars{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
-.avatars button{display:flex;flex-direction:column;align-items:center;gap:4px;padding:8px 2px;font-size:11px;font-weight:700;background:var(--card)}
-.avatars button svg{width:44px;height:44px}
-.avatars button.on{background:var(--accent);color:var(--accentInk)}
+.kidbtn{display:inline-flex;align-items:center;gap:8px;padding:6px 14px 6px 8px}
+.kidbtn svg{width:36px;height:36px;display:block}
+#kidDialog .sheet{max-height:86vh;overflow:auto}
+.khead{display:flex;justify-content:space-between;align-items:center}
+.kclose{width:40px;height:40px;padding:0;font-size:18px}
+.kpreview{position:relative;width:120px;height:120px;margin:8px auto 4px;cursor:default}
+.kpreview svg{width:100%;height:100%}
+#kidOptions h3{font-size:14px;margin:16px 0 8px}
+.kgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(72px,1fr));gap:8px}
+.kopt{display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 2px;font-size:11px;background:var(--card)}
+.kopt svg{width:46px;height:46px}
+.kopt .fb{opacity:0}
+.kopt.on,.swatch.on{background:var(--accent);color:var(--accentInk)}
+.sgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(56px,1fr));gap:6px}
+.swatch{display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 2px;font-size:10.5px;background:var(--card)}
+.swatch i{display:block;width:22px;height:22px;background:var(--sw);border:2px solid #111}
 .runner.moving .fa{animation:runA .6s steps(1,end) infinite}
 .runner.moving .fb{animation:runB .6s steps(1,end) infinite}
 @keyframes runA{0%{opacity:1}50%{opacity:0}}
@@ -292,6 +304,16 @@ button:not([data-st]):active{transform:translate(3px,3px);filter:none}
   </div>
 </dialog>
 
+<!-- 캐릭터 꾸미기 -->
+<dialog id="kidDialog" aria-labelledby="kidTitle">
+  <div class="sheet">
+    <div class="khead"><h2 id="kidTitle">내 캐릭터 꾸미기</h2><button type="button" class="kclose" id="kidClose" aria-label="닫기">✕</button></div>
+    <div class="kpreview runner moving" id="kidPreview"></div>
+    <div id="kidOptions"></div>
+    <button type="button" class="save" id="kidApply">적용</button>
+  </div>
+</dialog>
+
 <!-- 자주 안 바꾸는 설정 -->
 <dialog id="settings">
   <form class="sheet" id="form" method="dialog">
@@ -307,7 +329,7 @@ button:not([data-st]):active{transform:translate(3px,3px);filter:none}
         </select></div>
     </div>
     <label style="margin-top:14px">내 캐릭터 (경로 위에서 달리는 나)</label>
-    <div class="avatars" id="avatarPick"></div>
+    <button type="button" class="kidbtn" id="kidFromSettings"><span id="kidMini"></span>꾸미기</button>
     <div class="row">
       <button type="button" id="notifyBtn">알림 켜기</button>
       <button type="button" id="homeBtn">여기가 집이야</button>
@@ -364,7 +386,7 @@ const linesAt = name => [...new Set((BYNAME.get(name)||[]).map(lineOf))].sort();
 const badges = name => linesAt(name).map(badge).join(" ");
 
 // ---- 저장 ----
-const DEFAULTS = {avatar:"longBlack", from:"", to:"", arrive:"", prep:25, walkTo:7, walkFrom:5, buffer:3, interval:10, delay:0, home:null, recent:[]};
+const DEFAULTS = {kid:null, from:"", to:"", arrive:"", prep:25, walkTo:7, walkFrom:5, buffer:3, interval:10, delay:0, home:null, recent:[]};
 const store = {
   get(){ try{ return JSON.parse(localStorage.getItem("jansori-v1")) }catch{ return null } },
   set(v){ try{ localStorage.setItem("jansori-v1", JSON.stringify(v)) }catch{} }
@@ -777,74 +799,156 @@ function renderRoute(p){
 }
 
 // ---- 나: 경로 위를 달리는 작은 픽셀 사람 (머리 크고 팔다리 짧게, 눈·입 점) ----
-// 8비트 꼬마 (18×18칸): 머리 크고 몸 짧게, 눈은 세로 두 칸, 볼터치, 입은 무표정 일자
-// H 머리 · s 피부 · e 눈 · c 볼 · m 입 · T 윗옷 · P 바지 · o 신발 · k 테두리
-const KID_HEAD = [
-  "......kkkkkk......",
-  "....kkHHHHHHkk....",
-  "...kHHHHHHHHHHk...",
-  "..kHHHHHHHHHHHHk..",
-  "..kHHHHHHHHHHHHk..",
-  "..kHHssHHssssHHk..",
-  "..kHssssssssssHk..",
-  "..kHssessssessHk..",
-  "..kHssessssessHk..",
-  "..kHscsssssscsHk..",
-  "..kHHsssmmsssHHk..",
-];
-// 달리기 두 동작 (첫 번째 그림 포즈): A 한 팔 앞·한 팔 뒤, 다리 쭉 벌림 / B 팔 내리고 다리 모음
-const KID_RUN_A = [
-  ".....kTTTTTTk.....",
-  "....kTTTTTTTTkssk.",
-  ".kssTTTTTTTTk.....",
-  "...kkPPPPPPkk.....",
-  "...kPPPk.kPPPk....",
-  "..kook....kPPk....",
-  "..kkk.....kook....",
-];
-const KID_RUN_B = [
-  ".....kTTTTTTk.....",
-  "....kTTTTTTTTk....",
-  "...ksTTTTTTTTsk...",
-  "...kkPPPPPPkk.....",
-  "....kPPkkPPk......",
-  "....kPPk.kPk......",
-  "....kook.kook.....",
-];
-// 긴 머리: 몸 뒤로 내려오는 머리카락 (빈칸에만 그림)
-const KID_LONG = {11: ["kHH", "HHk"], 12: ["kHH", "HHk"], 13: ["kHk", "kHk"], 14: [".kk", "kk."]};
-const KID_LOOKS = {
-  longBlack:  {name:"긴 검정", long:true,  H:"#26262e", T:"#f28cb0", P:"#4aa3b8"},
-  longBrown:  {name:"긴 갈색", long:true,  H:"#8a4b2a", T:"#ffe14a", P:"#4a7fd9"},
-  shortBlack: {name:"짧은 검정", long:false, H:"#26262e", T:"#4aa3e8", P:"#6ab04c"},
-  shortOrange:{name:"짧은 주황", long:false, H:"#e0892c", T:"#f26b2a", P:"#4a7fd9"},
+// ---- 8비트 꼬마 캐릭터 (18×18칸): 머리 크고 몸 짧게, 눈 세로 두 칸, 볼터치, 무표정 입 ----
+// 부품을 겹쳐서 그림: 머리 스타일 · 머리색 · 상의 · 상의 색 · 하의 · 하의 색 · 신발. 성별 구분 없음
+const PALETTE = {
+  빨강:"#e03131", 주황:"#f08c00", 노랑:"#fcc419", 초록:"#37b24d", 파랑:"#1c7ed6", 남색:"#364fc7", 보라:"#7048e8",
+  검정:"#26262e", 흰색:"#f1f1ec", 금색:"#e9c46a", 브라운:"#8a4b2a", 분홍:"#f28cb0", 하늘:"#74c0fc", 회색:"#868e96", 청록:"#4aa3b8", 베이지:"#d8c3a5",
 };
-const KID_FIXED = {k:"#111", s:"#ffe0c2", e:"#111", c:"#ffa3b1", m:"#8a5a48", o:"#5a3a2a"};
-let gpsKnown = false, leftAt = null;   // leftAt: GPS로 집을 벗어난 걸 처음 본 시각
-function kidRows(body, look){
-  const rows = [...KID_HEAD, ...body].map(r => r.split(""));
-  if(look.long) for(const [y, [l, r]] of Object.entries(KID_LONG)){
-    [...l].forEach((c, i) => { if(c !== "." && rows[y][2+i] === ".") rows[y][2+i] = c; });
-    [...r].forEach((c, i) => { if(c !== "." && rows[y][13+i] === ".") rows[y][13+i] = c; });
-  }
-  return rows;
+const HAIR_COLORS = ["빨강","주황","노랑","초록","파랑","남색","보라","검정","흰색","금색","브라운"];
+const CLOTH_COLORS = ["빨강","주황","노랑","초록","파랑","남색","보라","검정","흰색","분홍","하늘","회색","청록","베이지","브라운"];
+const KID_OPTS = {
+  hair:   {shortBasic:"숏컷 기본", shortPerm:"숏컷 파마", pomade:"숏컷 포마드", mohican:"모히칸", ponytail:"포니테일", bald:"민머리", longStraight:"긴생머리", longPerm:"긴파마", bob:"단발"},
+  top:    {tee:"반팔", long:"긴팔", coat:"코트", knit:"니트", sleeveless:"나시"},
+  bottom: {pants:"바지", shorts:"반바지", mini:"미니스커트", longSkirt:"롱스커트", dress:"원피스"},
+  shoes:  {sneakers:"운동화", dressShoes:"구두", sandals:"샌들", barefoot:"맨발"},
+};
+const KID_DEFAULT = {hair:"longStraight", hairColor:"검정", top:"tee", topColor:"분홍", bottom:"pants", bottomColor:"청록", shoes:"sneakers"};
+const SKIN = "#ffe0c2", INK = "#111";
+const shade = (hex, amt) => {   // amt < 0 어둡게, > 0 밝게
+  const n = parseInt(hex.slice(1), 16), f = c => Math.round(amt < 0 ? c * (1 + amt) : c + (255 - c) * amt);
+  return "#" + [n >> 16, (n >> 8) & 255, n & 255].map(c => f(c).toString(16).padStart(2, "0")).join("");
+};
+// 몸통: U 몸통 · A 소매 자리 · h 손 · L 엉덩이 · G 다리 · F 발 · k 테두리
+// A 동작: 한 팔 앞·한 팔 뒤, 다리 쭉 벌림 / B 팔 내리고 다리 모음 (첫 번째 그림 포즈)
+const KID_BODY_A = [
+  ".....kUUUUUUk.....",
+  "....kAUUUUUUAAhhk.",
+  ".khhAAUUUUUUk.....",
+  "....kLLLLLLLLk....",
+  "...kGGGk..kGGGk...",
+  "..kFFk.....kGGk...",
+  "..kkk......kFFk...",
+];
+const KID_BODY_B = [
+  ".....kUUUUUUk.....",
+  "....kAUUUUUUAk....",
+  "...khAUUUUUUAhk...",
+  "....kLLLLLLLLk....",
+  ".....kGGk.kGGk....",
+  ".....kGGk.kGGk....",
+  ".....kFFk.kFFk....",
+];
+function kidHead(cfg){
+  const H = PALETTE[cfg.hairColor] || PALETTE.검정, Hd = shade(H, -.28), Hl = shade(H, .35);
+  const g = Array.from({length: 11}, () => Array(18).fill(null));
+  const span = [[6,11],[4,13],[3,14],[2,15],[2,15],[2,15],[2,15],[2,15],[2,15],[2,15],[2,15]];
+  const st = cfg.hair, bald = st === "bald", mohi = st === "mohican", pomade = st === "pomade";
+  const curly = st === "shortPerm" || st === "longPerm", longish = st === "longStraight" || st === "longPerm" || st === "bob";
+  const hair = (x, y) => curly ? ((x + y) % 2 ? Hd : H) : pomade && (x - y === 4 || x - y === 5) ? Hl : H;
+  span.forEach(([a, b], y) => {
+    for(let x = a; x <= b; x++){
+      const edge = y === 0 || x === a || x === b || (y === 1 && (x === a + 1 || x === b - 1));
+      let c;
+      if(edge) c = INK;
+      else if(y <= 4) c = bald || (mohi && (x < 7 || x > 10)) ? SKIN : hair(x, y);               // 정수리
+      else if(y === 5 && (x === 7 || x === 8)) c = bald || mohi || pomade ? SKIN : hair(x, y);    // 앞머리
+      else if((x === 3 || x === 14 || (y === 5 && (x === 4 || x === 13))) && y <= 9) c = bald || mohi ? SKIN : hair(x, y);   // 옆머리
+      else if(y === 10 && (x <= 4 || x >= 13)) c = longish || st === "ponytail" || st === "shortBasic" || st === "shortPerm" ? hair(x, y) : "jaw";
+      else c = SKIN;
+      g[y][x] = c;
+    }
+  });
+  // 머리 짧거나 없으면 턱 옆은 비우고 테두리 안쪽으로
+  for(const x of [2, 15]) if(g[10][x === 2 ? 3 : 14] === "jaw") g[10][x] = null;
+  for(const x of [3, 14]) if(g[10][x] === "jaw") g[10][x] = INK;
+  for(const x of [4, 13]) if(g[10][x] === "jaw") g[10][x] = SKIN;
+  // 얼굴: 눈 세로 두 칸, 볼터치, 무표정 입
+  for(const y of [7, 8]) for(const x of [6, 11]) g[y][x] = INK;
+  g[9][5] = g[9][12] = "#ffa3b1"; g[10][8] = g[10][9] = "#8a5a48";
+  if(mohi) for(const x of [7, 8, 9, 10]) g[0][x] = x % 2 ? H : INK;    // 모히칸 뾰족
+  if(st === "ponytail") [[3,"k."],[4,"kH"],[5,"kH"],[6,"kH"],[7,"kH"],[8,"kH"],[9,".k"]].forEach(([y, p]) =>   // 뒤로 묶은 꼬리
+    [...p].forEach((c, i) => { if(c !== "." && !g[y][i]) g[y][i] = c === "k" ? INK : H; }));
+  return {g, H, Hd};
 }
-function kidRects(rows, look){
-  const pal = {...KID_FIXED, H:look.H, T:look.T, P:look.P};
+function kidGrid(cfg, body){
+  const {g: head, H, Hd} = kidHead(cfg);
+  const T = PALETTE[cfg.topColor] || PALETTE.분홍, P = PALETTE[cfg.bottomColor] || PALETTE.청록;
+  const dress = cfg.bottom === "dress", torso = dress ? P : T;
+  const rows = body.map((row, j) => [...row].map((c, x) => {
+    const y = j + 11;
+    switch(c){
+      case "k": return INK;
+      case "h": return SKIN;
+      case "U": return cfg.top === "knit" && !dress && (x + y) % 2 ? shade(torso, -.15)
+                    : cfg.top === "coat" && x === 9 ? shade(torso, -.35) : torso;
+      case "A": return cfg.top === "sleeveless" ? SKIN : cfg.top === "tee" && y !== 12 ? SKIN : torso;
+      case "L": return cfg.top === "coat" && !dress ? T : P;
+      case "G": return cfg.bottom === "pants" ? P : cfg.bottom === "shorts" && y === 15 ? P
+                    : cfg.top === "coat" && y === 15 ? T : SKIN;
+      case "F": return cfg.shoes === "sneakers" ? "#f4f4f4" : cfg.shoes === "dressShoes" ? "#2b2b2b"
+                    : cfg.shoes === "sandals" ? ((x + y) % 2 ? "#8a5a3a" : SKIN) : SKIN;
+      default: return null;
+    }
+  }));
+  // 치마·원피스 밑단: 다리 줄을 통째로 덮음 (롱스커트는 두 줄)
+  const hemRows = cfg.bottom === "mini" || cfg.bottom === "dress" ? [4] : cfg.bottom === "longSkirt" ? [4, 5] : [];
+  for(const j of hemRows){
+    const xs = rows[j].map((c, x) => c ? x : -1).filter(x => x >= 0), l = Math.min(...xs), r = Math.max(...xs);
+    for(let x = l; x <= r; x++) rows[j][x] = x === l || x === r ? INK : x % 3 === 0 ? shade(P, -.12) : P;
+  }
+  const grid = [...head, ...rows];
+  // 긴 머리·단발은 몸 뒤로 내려오는 머리카락 (빈칸에만)
+  const back = cfg.hair === "longStraight" || cfg.hair === "longPerm"
+    ? {11: ["kHH","HHk"], 12: ["kHH","HHk"], 13: ["kHk","kHk"], 14: [".kk","kk."]}
+    : cfg.hair === "bob" ? {11: ["kHk","kHk"], 12: [".k.",".k."]} : {};
+  for(const [y, [l, r]] of Object.entries(back)){
+    [...l].forEach((c, i) => { if(c !== "." && !grid[y][2+i]) grid[y][2+i] = c === "k" ? INK : (cfg.hair === "longPerm" && (y % 2) ? Hd : H); });
+    [...r].forEach((c, i) => { if(c !== "." && !grid[y][13+i]) grid[y][13+i] = c === "k" ? INK : (cfg.hair === "longPerm" && (y % 2) ? Hd : H); });
+  }
+  return grid;
+}
+function gridRects(grid){
   let out = "";
-  rows.forEach((row, y) => {
+  grid.forEach((row, y) => {
     for(let x = 0; x < row.length; ){
       const c = row[x]; let w = 1;
-      while(row[x+w] === c) w++;
-      if(c !== ".") out += `<rect x="${x}" y="${y}" width="${w + .04}" height="1.04" fill="${pal[c]}"/>`;
+      while(x + w < row.length && row[x+w] === c) w++;
+      if(c) out += `<rect x="${x}" y="${y}" width="${w + .04}" height="1.04" fill="${c}"/>`;
       x += w;
     }
   });
   return out;
 }
-function runnerSvg(lookKey = s.avatar){
-  const look = KID_LOOKS[lookKey] || KID_LOOKS.longBlack;
-  return `<svg viewBox="0 0 18 18" shape-rendering="crispEdges" aria-hidden="true"><g class="fa">${kidRects(kidRows(KID_RUN_A, look), look)}</g><g class="fb">${kidRects(kidRows(KID_RUN_B, look), look)}</g></svg>`;
+const kidCfg = () => ({...KID_DEFAULT, ...(s.kid || {})});
+function runnerSvg(cfg = kidCfg()){
+  return `<svg viewBox="0 0 18 18" shape-rendering="crispEdges" aria-hidden="true"><g class="fa">${gridRects(kidGrid(cfg, KID_BODY_A))}</g><g class="fb">${gridRects(kidGrid(cfg, KID_BODY_B))}</g></svg>`;
+}
+let gpsKnown = false, leftAt = null;   // leftAt: GPS로 집을 벗어난 걸 처음 본 시각
+
+// ---- 캐릭터 꾸미기 팝업: 고르는 동안은 미리보기만, '적용' 눌러야 저장. X는 그냥 닫기 ----
+let kidDraft = null;
+function openKid(){
+  kidDraft = kidCfg();
+  renderKid();
+  $("kidDialog").showModal();
+}
+function renderKid(){
+  $("kidPreview").innerHTML = runnerSvg(kidDraft);
+  const opt = (group, key, label, inner) =>
+    `<button type="button" class="kopt ${kidDraft[group] === key ? "on" : ""}" data-g="${group}" data-v="${key}" aria-pressed="${kidDraft[group] === key}">${inner}<span>${label}</span></button>`;
+  const styleRow = group => Object.entries(KID_OPTS[group]).map(([k, label]) =>
+    opt(group, k, label, runnerSvg({...kidDraft, [group]: k}))).join("");
+  const colorRow = (group, list) => list.map(name =>
+    `<button type="button" class="swatch ${kidDraft[group] === name ? "on" : ""}" data-g="${group}" data-v="${name}" aria-pressed="${kidDraft[group] === name}" title="${name}" style="--sw:${PALETTE[name]}"><i></i><span>${name}</span></button>`).join("");
+  $("kidOptions").innerHTML = `
+    <h3>머리</h3><div class="kgrid">${styleRow("hair")}</div>
+    <h3>머리색</h3><div class="sgrid">${colorRow("hairColor", HAIR_COLORS)}</div>
+    <h3>상의</h3><div class="kgrid">${styleRow("top")}</div>
+    <h3>상의 색</h3><div class="sgrid">${colorRow("topColor", CLOTH_COLORS)}</div>
+    <h3>하의</h3><div class="kgrid">${styleRow("bottom")}</div>
+    <h3>하의 색</h3><div class="sgrid">${colorRow("bottomColor", CLOTH_COLORS)}</div>
+    <h3>신발</h3><div class="kgrid">${styleRow("shoes")}</div>`;
 }
 // 어디쯤 있는지: GPS로 집에 있으면 '집에서 나가기'에 서 있음, 집을 벗어났으면 계획 시각대로 경로를 따라 달림
 function placeRunner(times, homeIdx){
@@ -1170,15 +1274,16 @@ $("notifyBtn").addEventListener("click", async ()=>{
 
 // ---- 설정 ----
 const form = $("form"), SET_KEYS = ["walkTo","walkFrom","buffer","interval","delay"];
-function renderAvatarPick(){
-  $("avatarPick").innerHTML = Object.entries(KID_LOOKS).map(([k, l]) =>
-    `<button type="button" data-av="${k}" class="${s.avatar === k ? "on" : ""}" aria-pressed="${s.avatar === k}" title="${l.name}">${runnerSvg(k)}<span>${l.name}</span></button>`).join("");
-}
-$("avatarPick").addEventListener("click", e => {
-  const b = e.target.closest("[data-av]"); if(!b) return;
-  s.avatar = b.dataset.av; store.set(s); renderAvatarPick(); tick();
+$("kidFromSettings").addEventListener("click", openKid);
+$("kidClose").addEventListener("click", () => $("kidDialog").close());
+$("kidApply").addEventListener("click", () => { s.kid = kidDraft; store.set(s); $("kidDialog").close(); $("kidMini").innerHTML = runnerSvg(); tick(); });
+$("kidOptions").addEventListener("click", e => {
+  const b = e.target.closest("[data-g]"); if(!b) return;
+  kidDraft[b.dataset.g] = b.dataset.v; renderKid();
 });
-$("openSettings").addEventListener("click", ()=>{ for(const k of SET_KEYS) form.elements[k].value = s[k]; renderAvatarPick(); $("settings").showModal(); });
+// 경로 위 캐릭터를 누르면 꾸미기 팝업
+$("route").addEventListener("click", e => { if(e.target.closest(".runner")) openKid(); });
+$("openSettings").addEventListener("click", ()=>{ for(const k of SET_KEYS) form.elements[k].value = s[k]; $("kidMini").innerHTML = runnerSvg(); $("settings").showModal(); });
 $("sim").addEventListener("input", e=>{ simMin = Number(e.target.value); });
 form.addEventListener("submit", ()=>{
   for(const k of SET_KEYS) s[k] = Math.max(0, Number(form.elements[k].value)||0);
