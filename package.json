@@ -1,0 +1,10 @@
+{
+  "name": "jac-departure-coach",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "python3 scripts/serve.py --port 5183",
+    "test": "node --test tests/*.test.mjs",
+    "test:browser": "node tests/browser.cjs"
+  }
+}
