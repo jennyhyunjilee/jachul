@@ -268,7 +268,7 @@ button:not([data-st]):active{transform:translate(3px,3px);filter:none}
     <button id="bellBtn">🔔 늦으면 알림 받기</button>
   </div>
   <form class="askform needgoal" id="askForm" autocomplete="off">
-    <input id="askText" maxlength="200" placeholder="잔소리한테 아무거나 물어봐" aria-label="잔소리한테 물어보기">
+    <input id="askText" maxlength="200" placeholder="쟈철한테 아무거나 물어봐" aria-label="쟈철한테 물어보기">
     <button type="submit">보내기</button>
   </form>
 
@@ -710,7 +710,7 @@ function say(m, who="agent"){
   } else {
     el = document.createElement("div");
     el.className = "arow";
-    el.innerHTML = `<div class="avatar">${faceSvg(m.typing ? 1 : (m.face ?? 1))}</div><div class="abody"><div class="aname">잔소리</div><div class="msg agent ${m.level||""}"></div></div>`;
+    el.innerHTML = `<div class="avatar">${faceSvg(m.typing ? 1 : (m.face ?? 1))}</div><div class="abody"><div class="aname">쟈철</div><div class="msg agent ${m.level||""}"></div></div>`;
     const bubble = el.querySelector(".msg");
     if(m.typing) bubble.innerHTML = `<span class="typing"><i></i><i></i><i></i></span>`;
     else {
