@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""잔소리역 로컬 서버: 페이지 + 서울시 실시간 지하철 API 프록시.
+"""쟈철 로컬 서버: 페이지 + 서울시 실시간 지하철 API 프록시.
 
 API 키는 이 서버에만 있고 브라우저로는 절대 안 나간다.
 
@@ -57,7 +57,7 @@ def arrivals(station):
 # ---- 채팅에 Claude 연결 (선택) ----
 # anthropic 패키지(파이썬 3.10+)와 ANTHROPIC_API_KEY 가 있으면 켜짐. 없으면 화면이 내장 대답을 씀.
 CLAUDE_MODEL = os.environ.get("CLAUDE_MODEL", "claude-opus-5-5")
-CHAT_SYSTEM = """너는 '잔소리역'이라는 지하철 지각 방지 앱의 에이전트야. 사용자가 늦지 않게 보채는 게 일이야.
+CHAT_SYSTEM = """너는 '쟈철'이라는 지하철 지각 방지 앱의 에이전트야. 사용자가 늦지 않게 보채는 게 일이야.
 - 말투: 반말. 솔직하고 짧게, 2~3문장. 돌려 말하지 말고 지금 해야 할 행동을 말해.
 - 시각·열차·몇 분 늦는지는 [상황]에 있는 값만 써. 없는 정보는 지어내지 말고 모른다고 해.
 - 지하철·출발과 상관없는 질문이면 한 마디로 받아치고 출발 얘기로 돌아와.
@@ -163,5 +163,5 @@ class Handler(BaseHTTPRequestHandler):
 
 
 if __name__ == "__main__":
-    print(f"잔소리역 → http://localhost:{PORT}  (실시간 키 {'있음' if KEY else '없음 · 데모 모드'}, Claude 채팅 {'켜짐' if claude_ready() else '꺼짐'})")
+    print(f"쟈철 → http://localhost:{PORT}  (실시간 키 {'있음' if KEY else '없음 · 데모 모드'}, Claude 채팅 {'켜짐' if claude_ready() else '꺼짐'})")
     ThreadingHTTPServer(("127.0.0.1", PORT), Handler).serve_forever()
