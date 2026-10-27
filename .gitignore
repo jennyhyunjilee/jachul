@@ -2,3 +2,4 @@
 .env
 __pycache__/
 data/crawl_cache.json
+dist/

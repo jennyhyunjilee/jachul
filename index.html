@@ -4,7 +4,6 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>잔소리역</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://cdn.jsdelivr.net/npm/galmuri@2.40.3/dist/galmuri.css" rel="stylesheet">
 <style>
 /* 스티커 느낌: 굵은 테두리 + 딱딱한 그림자 + 형광 포인트 */
@@ -32,7 +31,7 @@
 svg text{font-family:"Galmuri11",sans-serif}
 body{margin:0;background:var(--bg);color:var(--ink);font-family:"Galmuri11",system-ui,sans-serif;line-height:1.5}
 .mono,.clock,.route .t,.trains .eta{font-family:"GalmuriMono11","Galmuri11",monospace;font-variant-numeric:tabular-nums}
-main{max-width:480px;margin:0 auto;padding:18px 16px 56px}
+main{max-width:480px;margin:0 auto;padding-block:18px 56px;padding-left:max(16px, env(safe-area-inset-left, 0px));padding-right:max(16px, env(safe-area-inset-right, 0px))}
 header{display:flex;align-items:center;gap:10px}
 .brand{flex:1;min-width:0}
 h1{font-size:26px;margin:0;font-weight:700;line-height:1.1;display:inline;color:var(--ink)}
@@ -677,6 +676,18 @@ function chatContext(){
     지금_판단: `${m.title} ${m.body}`, 실시간_열차정보: isLive(),
   };
 }
+const CHAT_RULES = `너는 '잔소리역'이라는 지하철 지각 방지 앱의 에이전트야. 사용자가 늦지 않게 보채는 게 일이야.
+- 말투: 반말. 솔직하고 짧게, 2~3문장. 돌려 말하지 말고 지금 해야 할 행동을 말해.
+- 시각·열차·몇 분 늦는지는 [상황]에 있는 값만 써. 없는 정보는 지어내지 말고 모른다고 해.
+- 지하철·출발과 상관없는 질문이면 한 마디로 받아치고 출발 얘기로 돌아와.
+- 형식: 첫 줄은 20자 이내 한 마디, 둘째 줄부터 설명. 마크다운 쓰지 마.`;
+let sampleCap = null;
+async function askSample(q){
+  const {text} = await sampleCap(`${CHAT_RULES}\n\n[상황]\n${JSON.stringify(chatContext())}\n\n[질문]\n${q}`, {modelTier: "quick", cache: false});
+  const [title, ...rest] = text.trim().split("\n");
+  const m = current();
+  return {level:m.level, face:m.face, title:title.trim(), body:rest.join(" ").trim()};
+}
 async function askClaude(q){
   const r = await fetch("api/chat", {method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({question:q, context: chatContext()})});
   const j = await r.json();
@@ -1315,12 +1326,14 @@ $("askForm").addEventListener("submit", e => {
   e.preventDefault();
   const q = $("askText").value.trim(); if(!q) return;
   $("askText").value = "";
-  reply(q, () => STATUS.claude ? askClaude(q).catch(() => localAnswer(q)) : localAnswer(q));
+  reply(q, () => STATUS.claude ? askClaude(q).catch(() => localAnswer(q))
+    : sampleCap ? askSample(q).catch(() => localAnswer(q)) : localAnswer(q));
 });
 $("bellBtn").addEventListener("click", async () => {
   unlockAudio();
   if(!("Notification" in window)) return say({level:"warn", face:1, title:"이 브라우저는 알림이 안 돼.", body:"대신 화면 켜두면 소리로 보챌게."});
-  const r = await Notification.requestPermission();
+  let r = "denied";
+  try{ r = await Notification.requestPermission(); }catch{}
   $("bellBtn").textContent = r === "granted" ? "🔔 알림 켜짐" : "🔕 알림 꺼짐";
   say(r === "granted" ? {level:"", face:0, title:"알림 켰어.", body:`늦을 것 같으면 ${s.interval}분마다 울릴게.`} : {level:"warn", face:1, title:"알림이 막혀 있어.", body:"브라우저 설정에서 알림을 허용해줘."});
 });
@@ -1382,14 +1395,15 @@ function watchHome(){
   }, ()=>{ $("homePill").textContent="위치 권한 없음"; }, {maximumAge:60000});
 }
 $("homeBtn").addEventListener("click", ()=>{
-  if(!navigator.geolocation) return alert("위치 못 써.");
+  const noGps = () => { $("homePill").textContent = "위치 못 씀"; say({level:"warn", face:1, title:"위치를 못 가져왔어.", body:"이 화면에선 GPS가 막혀 있어. 브라우저에서 위치 권한을 허용해줘."}); };
+  if(!navigator.geolocation) return noGps();
   navigator.geolocation.getCurrentPosition(pos=>{
     s.home = {lat:pos.coords.latitude, lng:pos.coords.longitude}; store.set(s); watchHome();
-  }, err=>alert("위치 못 가져왔어: "+err.message));
+  }, noGps);
 });
 $("notifyBtn").addEventListener("click", async ()=>{
-  if(!("Notification" in window)) return alert("이 브라우저는 알림 안 돼.");
-  const r = await Notification.requestPermission();
+  let r = "denied";
+  try{ if("Notification" in window) r = await Notification.requestPermission(); }catch{}
   $("notifyBtn").textContent = r==="granted" ? "알림 켜짐" : "알림 꺼짐";
 });
 
@@ -1413,6 +1427,8 @@ form.addEventListener("submit", ()=>{
 
 // ---- 시작 ----
 (async function init(){
+  // claude.ai 아티팩트 안에서만 있음: 채팅을 Claude에 연결
+  try{ if(window.claude && typeof window.claude.use === "function") window.claude.use("sample").then(x => { sampleCap = x; }).catch(() => {}); }catch{}
   // 상대 경로: 서버 하위 폴더에 올려도 동작. index.html만 올린 경우엔 둘 다 실패 → 안에 넣어둔 노선도 사용
   try{ const j = await (await fetch("api/status")).json(); STATUS = typeof j.key === "boolean" ? j : {key:false}; }catch{ STATUS = {key:false}; }
   let net = null;
