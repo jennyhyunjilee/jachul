@@ -104,7 +104,8 @@ body:not(.ready) .needgoal{display:none !important}
 /* 목표 정하기 전: 카드는 보여주고 뭐가 나올지만 안내 */
 .ghost{display:none;margin:12px 0 0;padding:14px;border:2px dashed var(--soft);border-radius:14px;color:var(--muted);font-size:14px;align-self:stretch}
 body:not(.ready) .ghost{display:block}
-body:not(.ready) .card.preview > :not(h2):not(.ghost){display:none !important}
+body:not(.ready) .card.preview > :not(h2):not(.ghost):not(.dialhead){display:none !important}
+body:not(.ready) #moreLate{display:none}
 .example{margin-top:10px;background:var(--accent);color:var(--accentInk);border-color:var(--accent);box-shadow:none;font-size:14px;padding:6px 12px}
 
 /* 다이얼 */
@@ -237,7 +238,7 @@ button:not([data-st]):active{transform:translate(3px,3px);filter:none}
 
   <!-- 1. 목표: 모든 판단의 기준 -->
   <section class="goal" aria-label="오늘 목표">
-    <div class="goal-label">오늘 목표</div>
+    <div class="goal-label" id="goalLabel">오늘 목표</div>
     <div class="goal-head" id="goalHead"></div>
     <div class="stations">
       <button class="field" id="fromBtn"><small>어디서 타?</small><span class="v" id="fromV"></span></button>
@@ -743,8 +744,15 @@ function renderGoal(){
   const total = route.reduce((a,l)=>a+legRide(l),0) + (route.length-1)*XFER_WALK + s.walkTo + s.walkFrom;
   $("goalSum").innerHTML = `${route.map(l=>badge(l.l)).join(" → ")} · ${route.length>1 ? `환승 ${route.length-1}번` : "환승 없음"} · 집에서 대략 ${total}분 (대기 빼고)`;
 }
-function goalChanged(){
-  store.set(s); route = findRoute(s.from, s.to); forceSay = !!route && !!s.arrive; sent.clear(); selOffset = 0;
+let exampleMode = false;   // 예시 목표로 채워둔 상태: 사용자가 뭘 바꾸기 전엔 저장 안 함
+function fillExample(){
+  const d = new Date(now() + 100*MIN); d.setMinutes(Math.ceil(d.getMinutes()/5)*5, 0, 0);
+  Object.assign(s, {from:"홍대입구", to:"강남", arrive:`${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`});
+}
+function goalChanged(save = true){
+  if(save){ exampleMode = false; store.set(s); }
+  $("goalLabel").textContent = exampleMode ? "예시 목표 · 네 역으로 바꿔봐" : "오늘 목표";
+  route = findRoute(s.from, s.to); forceSay = !!route && !!s.arrive; sent.clear(); selOffset = 0;
   document.body.classList.toggle("ready", ready());
   tick(); fetchLive();
 }
@@ -754,8 +762,7 @@ $("prepPlus").addEventListener("click", ()=>{ s.prep = Math.min(120, s.prep+5); 
 // 처음 온 사람용: 홍대입구 → 강남, 1시간 뒤 도착
 $("goalSum").addEventListener("click", e=>{
   if(!e.target.closest("[data-example]")) return;
-  const d = new Date(now() + 60*MIN); d.setMinutes(Math.ceil(d.getMinutes()/5)*5, 0, 0);
-  Object.assign(s, {from:"홍대입구", to:"강남", arrive:`${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`});
+  fillExample();
   goalChanged();
 });
 $("swapBtn").addEventListener("click", ()=>{ [s.from, s.to] = [s.to, s.from]; goalChanged(); });
@@ -1439,7 +1446,11 @@ form.addEventListener("submit", ()=>{
   if(s.to && !BYNAME.has(s.to)) s.to = "";
   if(s.home) watchHome();
   renderSource();
-  goalChanged();
+  if(!s.from && !s.to && !s.arrive){
+    fillExample(); exampleMode = true;
+    say({level:"", face:0, title:"예시로 채워놨어.", body:"위에서 어디서 타고 어디서 내리는지, 몇 시까지인지 네 걸로 바꿔. 바꾸면 그때부터 기억할게."});
+    goalChanged(false);
+  } else goalChanged();
   setInterval(tick, 5000);
   scheduleLive();
 })();
