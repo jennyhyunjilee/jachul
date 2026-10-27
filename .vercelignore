@@ -1,0 +1,11 @@
+# Vercel은 화면(정적 파일)만 배포한다.
+# server.py가 있으면 Vercel이 파이썬 서버로 보고 모든 요청을 거기로 보내서
+# app.css·app.js가 404가 된다. 그래서 파이썬·개발용 파일은 배포에서 뺀다.
+*.py
+scripts/
+requirements.txt
+tests/
+output/
+dist/
+.idea/
+.claude/
