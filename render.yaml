@@ -17,5 +17,7 @@ services:
         value: https://jachul.vercel.app
       - key: PYTHON_VERSION
         value: 3.11.9
-      - key: OPENAI_API_KEY
+      - key: SEOUL_SUBWAY_KEY
+        sync: false
+      - key: ANTHROPIC_API_KEY
         sync: false

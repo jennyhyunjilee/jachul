@@ -1,19 +1,19 @@
-"""쟈철 백엔드 (Render). 표준 라이브러리만 사용.
+"""쟈철 백엔드 (Render).
 
 - /api/health        Render 상태 확인
-- /api/ai/status     음성 AI(OpenAI) 연결 여부
-- /api/intent        말한 문장 → 목표 필드 (OpenAI)
-- /api/transcribe    녹음 → 글자 (OpenAI)
+- /api/status        실시간 지하철 키·Claude 채팅 켜졌는지
+- /api/arrivals      역별 실시간 도착정보 (서울시 API, 20초 캐시)
+- /api/chat          (선택) 채팅 질문을 Claude가 대답
 
 API 키는 이 서버의 환경변수에만 있고 브라우저로 나가지 않는다.
 프론트(Vercel)는 다른 도메인이라 ALLOWED_ORIGINS에 있는 곳에서만 요청을 받는다.
 로컬에서는 frontend/ 폴더도 같이 내보내서 주소 하나로 확인할 수 있다.
 
-    python3 backend/app.py              # http://127.0.0.1:5183
+    python3 backend/app.py              # http://127.0.0.1:5173
 """
 from http.server import ThreadingHTTPServer, SimpleHTTPRequestHandler
 from pathlib import Path
-from urllib.parse import unquote, urlsplit
+from urllib.parse import parse_qs, unquote, urlsplit
 import argparse
 import json
 import os
@@ -22,21 +22,21 @@ import sys
 ROOT = Path(__file__).resolve().parent
 FRONTEND = ROOT.parent / 'frontend'
 sys.path.insert(0, str(ROOT))
-from ai_proxy import OpenAIProxy, ApiError
+import chat
+import subway
 
 ALLOWED_ORIGINS = {o.strip().rstrip('/') for o in os.environ.get(
     'ALLOWED_ORIGINS', 'https://jachul.vercel.app').split(',') if o.strip()}
 # Render에서는 SERVE_FRONTEND=0 (프론트는 Vercel이 맡음)
 SERVE_FRONTEND = os.environ.get('SERVE_FRONTEND', '1') == '1' and FRONTEND.is_dir()
-STATIC = {'/', '/index.html', '/app.css', '/app.js', '/config.js', '/auth.mjs', '/characters.mjs', '/core.mjs',
-          '/location.mjs', '/provider.mjs', '/routines.mjs', '/calendar.mjs', '/voice.mjs', '/data/network.json'}
+STATIC = {'/', '/index.html', '/config.js', '/auth.mjs', '/data/network.json'}
 
 
 class Handler(SimpleHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, directory=str(FRONTEND), **kwargs)
 
-    def log_message(self, fmt, *args):   # 요청 내용(음성·문장)은 기록하지 않음
+    def log_message(self, fmt, *args):   # 질문 내용은 기록하지 않음
         pass
 
     # ---- 출처 확인 ----
@@ -82,14 +82,24 @@ class Handler(SimpleHTTPRequestHandler):
         self.end_headers()
 
     def do_GET(self):
-        path = urlsplit(self.path).path
-        if path == '/api/health':
+        url = urlsplit(self.path)
+        if url.path == '/api/health':
             return self.json_response(200, {'ok': True})
-        if path == '/api/ai/status':
+        if url.path == '/api/status':
+            return self.json_response(200, {'key': bool(subway.KEY), 'network': True, 'claude': chat.ready()})
+        if url.path == '/api/arrivals':
             if not self.origin_ok():
-                return self.json_response(403, {'error': {'code': 'origin', 'message': '허용된 페이지에서 요청해줘.'}})
-            return self.json_response(200, OpenAIProxy().status())
-        if SERVE_FRONTEND and unquote(path) in STATIC:
+                return self.json_response(403, {'ok': False, 'error': '허용된 페이지에서 요청해줘.'})
+            station = (parse_qs(url.query).get('station') or [''])[0].strip()
+            if not subway.KEY:
+                return self.json_response(503, {'ok': False, 'error': '서버에 SEOUL_SUBWAY_KEY 가 없어'})
+            if not station or len(station) > 30:
+                return self.json_response(400, {'ok': False, 'error': 'station 이 이상해'})
+            try:
+                return self.json_response(200, subway.arrivals(station))
+            except Exception:
+                return self.json_response(502, {'ok': False, 'error': '서울시 API 호출 실패'})
+        if SERVE_FRONTEND and unquote(url.path) in STATIC:
             return super().do_GET()
         self.send_error(404)
 
@@ -99,47 +109,29 @@ class Handler(SimpleHTTPRequestHandler):
         self.send_error(404)
 
     def do_POST(self):
-        path = urlsplit(self.path).path
+        if urlsplit(self.path).path != '/api/chat':
+            return self.json_response(404, {'ok': False, 'error': '없음'})
+        if not self.origin_ok():
+            return self.json_response(403, {'ok': False, 'error': '허용된 페이지에서 요청해줘.'})
+        if not chat.ready():
+            return self.json_response(503, {'ok': False, 'error': 'Claude 연결 안 됨'})
         try:
-            if path not in {'/api/intent', '/api/transcribe'}:
-                raise ApiError(404, 'not_found', '찾을 수 없는 요청이야.')
-            if not self.origin_ok():
-                raise ApiError(403, 'origin', '허용된 페이지에서 요청해줘.')
-            try:
-                length = int(self.headers.get('Content-Length', '0'))
-            except ValueError:
-                raise ApiError(400, 'invalid_input', '입력 크기를 확인하지 못했어.')
-            limit = 4 * 1024 * 1024 if path == '/api/transcribe' else 16384
-            if length <= 0 or length > limit:
-                raise ApiError(413, 'input_size', '입력이 너무 크거나 비어 있어.')
-            self.connection.settimeout(30)
-            body = self.rfile.read(length)
-            if len(body) != length:
-                raise ApiError(400, 'invalid_input', '입력을 끝까지 받지 못했어.')
-            proxy = OpenAIProxy()
-            if path == '/api/intent':
-                if self.headers.get('Content-Type', '').split(';')[0] != 'application/json':
-                    raise ApiError(415, 'content_type', 'JSON 문장 입력이 필요해.')
-                try:
-                    obj = json.loads(body)
-                except (ValueError, UnicodeError):
-                    raise ApiError(400, 'invalid_input', '문장 입력 형식을 확인해줘.')
-                result = proxy.intent(obj)
-            else:
-                result = proxy.transcribe(body, self.headers.get('Content-Type', ''))
-            self.json_response(200, result)
-        except ApiError as e:
-            self.json_response(e.status, {'error': {'code': e.code, 'message': e.message}})
-        except (TimeoutError, OSError):
-            self.json_response(504, {'error': {'code': 'timeout', 'message': '요청 시간이 초과됐어. 다시 시도해줘.'}})
-        except Exception:
-            self.json_response(500, {'error': {'code': 'internal', 'message': '요청을 처리하지 못했어. 직접 입력으로 계속해줘.'}})
+            length = min(int(self.headers.get('Content-Length') or 0), 20000)
+            data = json.loads(self.rfile.read(length) or b'{}')
+            question = str(data.get('question', '')).strip()[:200]
+            context = data.get('context') if isinstance(data.get('context'), dict) else {}
+        except (ValueError, json.JSONDecodeError):
+            return self.json_response(400, {'ok': False, 'error': '요청이 이상해'})
+        if not question:
+            return self.json_response(400, {'ok': False, 'error': '질문이 비었어'})
+        self.json_response(200, chat.reply(question, context))
 
 
 if __name__ == '__main__':
     p = argparse.ArgumentParser()
-    p.add_argument('--port', type=int, default=int(os.environ.get('PORT', '5183')))
+    p.add_argument('--port', type=int, default=int(os.environ.get('PORT', '5173')))
     p.add_argument('--host', default=os.environ.get('HOST', '127.0.0.1'))
     a = p.parse_args()
-    print(f'쟈철 백엔드: http://{a.host}:{a.port}/' + ('' if SERVE_FRONTEND else ' (API만)'), flush=True)
+    print(f'쟈철 백엔드: http://{a.host}:{a.port}/' + ('' if SERVE_FRONTEND else ' (API만)')
+          + f" · 실시간 {'켜짐' if subway.KEY else '꺼짐'} · Claude 채팅 {'켜짐' if chat.ready() else '꺼짐'}", flush=True)
     ThreadingHTTPServer((a.host, a.port), Handler).serve_forever()

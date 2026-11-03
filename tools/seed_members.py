@@ -2,7 +2,7 @@
 """회원 명부(회원_명부.txt, 깃에 안 올림)를 Supabase에 등록한다.
 
 명부 형식: 한 줄에 `이름<TAB>이메일`
-- public.members 에 이름·이메일 저장 (있으면 이름만 갱신)
+- public.jachul_members 에 이름·이메일 저장 (있으면 이름만 갱신)
 - 로그인 계정(auth.users)이 없으면 만든다. 비밀번호는 없이 만들고,
   회원이 처음 접속해서 "비밀번호 만들기"를 누르면 메일 링크로 직접 정한다.
 - 메일은 여기서 보내지 않는다.
@@ -64,9 +64,9 @@ def main():
     print(f"명부 {len(roster)}명")
     if args.dry_run:
         return
-    status, _ = call("POST", f"{url}/rest/v1/members?on_conflict=email", key,
+    status, _ = call("POST", f"{url}/rest/v1/jachul_members?on_conflict=email", key,
                      [{"email": e, "name": n} for n, e in roster], prefer="resolution=merge-duplicates")
-    print(f"members 등록: HTTP {status}")
+    print(f"jachul_members 등록: HTTP {status}")
     _, data = call("GET", f"{url}/auth/v1/admin/users?per_page=1000", key)
     existing = {u["email"].lower() for u in (data or {}).get("users", [])}
     for n, e in roster:
