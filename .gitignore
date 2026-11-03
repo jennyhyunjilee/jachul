@@ -3,3 +3,7 @@
 __pycache__/
 data/crawl_cache.json
 dist/
+
+# 회원 명부 (개인정보): 절대 커밋하지 않음
+회원_명부.txt
+*명부*.txt
