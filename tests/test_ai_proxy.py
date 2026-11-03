@@ -5,7 +5,7 @@ import sys
 import unittest
 from pathlib import Path
 from urllib.error import HTTPError, URLError
-sys.path.insert(0,str(Path(__file__).resolve().parent.parent))
+sys.path.insert(0,str(Path(__file__).resolve().parent.parent/'backend'))
 from ai_proxy import OpenAIProxy, ApiError, SCHEMA, settings
 
 INTENT={'from':'홍대입구','to':'이대','date':'2026-10-28','arrive':'09:00','prep':30,'time_ambiguous':False}

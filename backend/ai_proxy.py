@@ -11,6 +11,8 @@ from urllib.request import Request, urlopen
 from zoneinfo import ZoneInfo
 
 ROOT=Path(__file__).resolve().parent
+REPO=ROOT.parent
+NETWORK=Path(os.environ.get('NETWORK_PATH') or REPO/'frontend/data/network.json')
 FIELDS=('from','to','date','arrive','prep','time_ambiguous')
 SCHEMA={'type':'object','properties':{**{k:{'type':['string','null']} for k in FIELDS[:4]},'prep':{'type':['integer','null']},'time_ambiguous':{'type':'boolean'}},'required':list(FIELDS),'additionalProperties':False}
 class ApiError(Exception):
@@ -20,7 +22,7 @@ class ApiError(Exception):
 
 def settings(environ=None,env_path=None):
     result={k:v for k,v in (os.environ if environ is None else environ).items() if k in {'OPENAI_API_KEY','OPENAI_INTENT_MODEL','OPENAI_TRANSCRIBE_MODEL'}}
-    path=Path(env_path) if env_path else ROOT/'.env'
+    path=Path(env_path) if env_path else REPO/'.env'
     if path.is_file():
         for line in path.read_text().splitlines():
             key,sep,value=line.strip().removeprefix('export ').partition('=')
@@ -109,7 +111,7 @@ class OpenAIProxy:
         except (ValueError,TypeError): raise ApiError(502,'invalid_ai_response','AI 응답 형식을 확인하지 못했어. 다시 시도해줘.') from None
         parsed=validate_intent(parsed)
         invalid=[]
-        net=json.loads((ROOT/'data/network.json').read_text())
+        net=json.loads(NETWORK.read_text())
         names={n.get('d',n['n']) for n in net['nodes'].values()}
         for field in ('from','to'):
             value=parsed[field]

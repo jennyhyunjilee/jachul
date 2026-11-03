@@ -1,9 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
-import {graph,getRoute} from '../core.mjs';
-import {mergeIntent,validateVoiceGoal,IntentSession} from '../voice.mjs';
-const g=graph(JSON.parse(await readFile(new URL('../data/network.json',import.meta.url)))),provider={g,getRoute:(a,b)=>getRoute(g,a,b)};
+import {graph,getRoute} from '../frontend/core.mjs';
+import {mergeIntent,validateVoiceGoal,IntentSession} from '../frontend/voice.mjs';
+const g=graph(JSON.parse(await readFile(new URL('../frontend/data/network.json',import.meta.url)))),provider={g,getRoute:(a,b)=>getRoute(g,a,b)};
 const now=Date.parse('2026-10-27T23:55:00+09:00'),base={from:'홍대입구',prep:20,walkTo:7,walkFrom:8,buffer:5};
 const fields={from:null,to:'이대',date:'2026-10-28',arrive:'09:00',prep:30,time_ambiguous:false};
 test('voice merges a short missing-origin answer without deleting destination/date/time',()=>{let p=mergeIntent({},fields,{});assert.match(validateVoiceGoal(p,{},provider,now).question,/출발/);p=mergeIntent(p,{from:'홍대입구',to:null,date:null,arrive:null,prep:null,time_ambiguous:false},{});const r=validateVoiceGoal(p,{},provider,now);assert.equal(r.goal.to,'이대');assert.equal(r.goal.prep,30);assert.equal(r.goal.date,'2026-10-28');});

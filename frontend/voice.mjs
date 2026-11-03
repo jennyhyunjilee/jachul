@@ -1,4 +1,5 @@
-import {DEFAULTS,localDate,targetTime} from './core.mjs';
+import {DEFAULTS,localDate,targetTime} from './core.mjs'
+const api=path=>(globalThis.JACHUL_CONFIG?.apiBase||'')+path;
 export function mergeIntent(previous={},next={},defaults={},invalid=[]){
  const merged={...previous};for(const k of ['from','to','date','arrive','prep'])if(next[k]!==null&&next[k]!==undefined)merged[k]=next[k];
  if(typeof next.time_ambiguous==='boolean')merged.time_ambiguous=next.time_ambiguous;
@@ -29,7 +30,7 @@ export class IntentSession{
  cancel(){this.invalidate();this.partial={};this.history=[];}
  async analyze(text){
   this.controller?.abort();const request=++this.epoch,controller=new AbortController();this.controller=controller;const timeout=setTimeout(()=>controller.abort(),30000);
-  try{const r=await this.fetcher('/api/intent',{method:'POST',headers:{'Content-Type':'application/json'},signal:controller.signal,body:JSON.stringify({transcript:text,date:localDate(this.clock()),defaults:this.defaults(),context:{intent:this.partial,history:this.history}})});
+  try{const r=await this.fetcher(api('/api/intent'),{method:'POST',headers:{'Content-Type':'application/json'},signal:controller.signal,body:JSON.stringify({transcript:text,date:localDate(this.clock()),defaults:this.defaults(),context:{intent:this.partial,history:this.history}})});
    if(request!==this.epoch)return null;let result;try{result=await r.json();}catch{throw new Error('AI 응답을 읽지 못했어. 직접 목표를 입력하거나 다시 시도해줘.');}
    if(request!==this.epoch)return null;if(!r.ok)throw new Error(result.error?.message||'AI에 연결하지 못했어. 직접 목표를 입력해줘.');
    if(result.source!=='openai'||!result.intent||typeof result.intent!=='object')throw new Error('AI 응답 형식을 확인하지 못했어.');
@@ -45,7 +46,7 @@ export function initVoice({getState,provider,startGoal,isDemo,toast}){
  function cleanup(){generation++;starting=false;session.cancel();mediaController?.abort();mediaController=null;try{recognition?.abort();}catch{}recognition=null;clearTimeout(timer);if(recorder&&recorder.state!=='inactive')try{recorder.stop();}catch{}recorder=null;recording=false;chunks=[];stopTracks();$('recordVoice').textContent='말하기 시작';$('recordVoice').disabled=false;$('parseVoice').disabled=false;}
  function close(){cleanup();if($('voiceDialog').open)$('voiceDialog').close();}
  async function open(){if(isDemo()){toast('데모를 종료하면 실제 음성 목표를 설정할 수 있어.');return;}cleanup();$('voiceText').value='';$('voiceQuestion').textContent='예: 내일 오전 9시까지 이대 가야 해. 준비는 30분.';$('voiceSummary').textContent='';$('voiceDialog').showModal();$('voiceApiStatus').textContent='AI 연결 상태 확인 중';const id=generation;
-  try{const r=await fetch('/api/ai/status',{cache:'no-store'}),s=await r.json();if(id!==generation)return;configured=!!(r.ok&&s.configured);$('voiceApiStatus').textContent=configured?'OpenAI 문장 분석 준비됨 · 말한 문장으로 요청할 때 처리':'AI 미연결 · 서버 키 설정 대기. 직접 목표 입력은 계속 쓸 수 있어.';}catch{if(id!==generation)return;configured=false;$('voiceApiStatus').textContent='AI 서버에 연결할 수 없어. 직접 목표 입력을 사용해줘.';}
+  try{const r=await fetch(api('/api/ai/status'),{cache:'no-store'}),s=await r.json();if(id!==generation)return;configured=!!(r.ok&&s.configured);$('voiceApiStatus').textContent=configured?'OpenAI 문장 분석 준비됨 · 말한 문장으로 요청할 때 처리':'AI 미연결 · 서버 키 설정 대기. 직접 목표 입력은 계속 쓸 수 있어.';}catch{if(id!==generation)return;configured=false;$('voiceApiStatus').textContent='AI 서버에 연결할 수 없어. 직접 목표 입력을 사용해줘.';}
  }
  async function analyze(){
   const text=$('voiceText').value.trim();if(!text){$('voiceQuestion').textContent='목적지와 도착 시각을 말하거나 입력해줘.';return;}
@@ -79,7 +80,7 @@ export function initVoice({getState,provider,startGoal,isDemo,toast}){
    recorder.onerror=()=>{if(id!==generation)return;cleanup();$('voiceQuestion').textContent='녹음 오류가 발생했어. 직접 문장을 입력해줘.';};
    recorder.onstop=async()=>{clearTimeout(timer);stopTracks();recording=false;starting=false;if(id!==generation)return;$('recordVoice').textContent='말하기 시작';if(tooLarge){chunks=[];$('voiceQuestion').textContent='녹음이 4MB를 넘었어. 더 짧게 말하거나 직접 입력해줘.';return;}const blob=new Blob(chunks,{type});chunks=[];if(!blob.size){$('voiceQuestion').textContent='말소리를 확인하지 못했어. 문장으로 입력해줘.';return;}
     mediaController=new AbortController();const controller=mediaController;const timeout=setTimeout(()=>controller.abort(),30000);$('voiceQuestion').textContent='음성을 문장으로 바꾸는 중…';
-    try{const r=await fetch('/api/transcribe',{method:'POST',headers:{'Content-Type':type},body:blob,signal:controller.signal});const data=await r.json();if(id!==generation)return;if(!r.ok)throw new Error(data.error?.message||'음성 전사에 실패했어.');if(typeof data.transcript!=='string'||!data.transcript.trim())throw new Error('말소리를 찾지 못했어.');$('voiceText').value=data.transcript;await analyze();}catch(e){if(id===generation)$('voiceQuestion').textContent=e.name==='AbortError'?'전사가 지연됐어. 다시 말하거나 직접 입력해줘.':e.message;}finally{clearTimeout(timeout);if(id===generation)mediaController=null;}
+    try{const r=await fetch(api('/api/transcribe'),{method:'POST',headers:{'Content-Type':type},body:blob,signal:controller.signal});const data=await r.json();if(id!==generation)return;if(!r.ok)throw new Error(data.error?.message||'음성 전사에 실패했어.');if(typeof data.transcript!=='string'||!data.transcript.trim())throw new Error('말소리를 찾지 못했어.');$('voiceText').value=data.transcript;await analyze();}catch(e){if(id===generation)$('voiceQuestion').textContent=e.name==='AbortError'?'전사가 지연됐어. 다시 말하거나 직접 입력해줘.':e.message;}finally{clearTimeout(timeout);if(id===generation)mediaController=null;}
    };
    recorder.start(1000);timer=setTimeout(()=>{if(recorder?.state==='recording')recorder.stop();},30000);
   }catch{if(id===generation){starting=false;recording=false;stopTracks();$('voiceQuestion').textContent='마이크를 켜지 못했어. 권한을 확인하거나 직접 문장을 입력해줘.';}}

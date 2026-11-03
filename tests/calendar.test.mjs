@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {createCalendar,escapeText,foldLine} from '../calendar.mjs';
-import {nextOccurrence,normalizeRoutines} from '../routines.mjs';
+import {createCalendar,escapeText,foldLine} from '../frontend/calendar.mjs';
+import {nextOccurrence,normalizeRoutines} from '../frontend/routines.mjs';
 const routine={id:'work',name:'출근하기',from:'홍대입구',to:'이대',arrive:'09:00',days:[1,2,3,4,5],prep:20,walkTo:7,walkFrom:8,buffer:5};
 const target=Date.parse('2026-10-28T09:00:00+09:00'),goal={...routine,date:'2026-10-28'},plan={target,prepare:target-60*60000,leave:target-40*60000},now=target-120*60000;
 const unfold=s=>s.replace(/\r\n /g,'');

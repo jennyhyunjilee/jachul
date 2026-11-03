@@ -3,3 +3,12 @@
 .departure-times{display:flex;justify-content:space-between;gap:10px;font-size:11px;border-top:1px dashed #bbb;padding:15px 0 21px}.departure-times strong{display:block;font-size:16px;margin-top:5px}.schedule-actions{border-top:1px solid #ddd;padding-top:15px;margin-top:14px}.schedule-actions button{font-size:10px}.routines-panel{background:#f0ebff;margin-bottom:28px}.routine-card{border-top:1px dashed #aaa;padding:18px 0 0;margin-top:18px}.routine-card h3{font-size:18px;margin-bottom:7px}.routine-card p{font-size:12px;margin-bottom:7px}.routine-start{width:100%;background:var(--lime);text-align:left;margin:8px 0 12px;font-size:15px}.weekdays{margin:18px 0;border:1px solid #bbb;padding:12px;display:flex;flex-wrap:wrap;gap:12px}.weekdays label{display:flex;align-items:center;gap:5px}.weekdays input,#repeatOptions input{width:auto!important;min-height:auto!important;margin:0!important}#repeatOptions{border:1px solid #bbb;padding:15px}#repeatOptions label{margin:10px 0}#calendarDialog>.primary{margin-top:20px}.weekdays legend,#repeatOptions legend{font-size:12px}@media(max-width:360px){.metrics span{font-size:10px}.schedule-actions button{padding:8px;font-size:10px}.departure-times{font-size:10px}}
 
 .voice-launch{display:block;background:var(--violet);width:100%;max-width:330px;margin:15px 0 3px;box-shadow:3px 3px 0 #222}#voiceForm{margin-top:20px}#voiceQuestion{font-weight:700;font-size:14px;margin:16px 0}#voiceDialog .primary{margin:12px 0}.target-actions>[data-open-voice]{font-size:10px}#voiceText{resize:vertical}
+
+/* 로그인 */
+.account{margin-left:auto}
+.account+.small{margin-left:0}
+#authDialog form,#authDialog [data-view]{display:grid;gap:4px}
+#authDialog [hidden]{display:none}
+.auth-msg{margin:12px 0 0;font-size:13px;font-weight:700;color:#c2321b}
+.auth-msg.ok{color:#1f7a3e}
+.auth-msg:empty{display:none}

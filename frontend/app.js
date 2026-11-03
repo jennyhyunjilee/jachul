@@ -17,7 +17,9 @@ const state=()=>demo||real,now=()=>demo?demoTime:Date.now(),provider=new LocalPr
 const htmlCache=new Map();
 function stableHTML(id,html){if(htmlCache.get(id)===html)return;htmlCache.set(id,html);$(id).innerHTML=html;}
 const monitor=new HomeMonitor(navigator.geolocation,()=>renderHome());
-function save(){if(demo)return;try{localStorage.setItem('jansori-v1',JSON.stringify(real));storageOK=true;}catch{storageOK=false;}renderStorage();}
+function save(quiet){if(demo)return;try{localStorage.setItem('jansori-v1',JSON.stringify(real));storageOK=true;}catch{storageOK=false;}renderStorage();if(!quiet)window.dispatchEvent(new CustomEvent('jachul:saved',{detail:{favorites:real.favorites,routines:real.routines}}));}
+// 로그인하면(auth.mjs) 클라우드에 저장된 내 경로를 받아서 합침
+window.addEventListener('jachul:cloud',e=>{real=migrate({...real,favorites:e.detail.favorites,routines:e.detail.routines});save(true);renderSaved();renderRoutines();});
 function toast(t){$('toast').textContent=t;$('toast').hidden=false;clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('toast').hidden=true,4500);}
 function notice(t){$('notice').textContent=t;$('notice').hidden=!t;}
 function renderStorage(){$('storageStatus').textContent=storageOK?'설정은 이 브라우저에만 저장해.':'저장이 차단됐어. 현재 화면에서는 사용할 수 있지만 새로고침하면 설정이 사라져.';}

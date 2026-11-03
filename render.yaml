@@ -1,0 +1,21 @@
+# Render 블루프린트: 백엔드(API)만. 프론트는 Vercel, DB·로그인은 Supabase.
+services:
+  - type: web
+    name: jachul-api
+    runtime: python
+    region: singapore
+    plan: free
+    buildCommand: pip install -r backend/requirements.txt
+    startCommand: python backend/app.py
+    healthCheckPath: /api/health
+    envVars:
+      - key: HOST
+        value: 0.0.0.0
+      - key: SERVE_FRONTEND
+        value: "0"
+      - key: ALLOWED_ORIGINS
+        value: https://jachul.vercel.app
+      - key: PYTHON_VERSION
+        value: 3.11.9
+      - key: OPENAI_API_KEY
+        sync: false

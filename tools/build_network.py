@@ -26,7 +26,7 @@ from collections import defaultdict, deque
 
 from lines import LINE_META, load_env
 
-ROOT = os.path.dirname(os.path.abspath(__file__))
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 BASE = "http://swopenapi.seoul.go.kr/api/subway"
 CACHE = os.path.join(ROOT, "data", "crawl_cache.json")
 
@@ -168,7 +168,7 @@ def main():
     ap.add_argument("--gap", type=int, default=30, help="일괄 회차 사이 대기(초)")
     ap.add_argument("--budget", type=int, default=800, help="역별 탐색에서 이번 실행 최대 호출 수")
     ap.add_argument("--crawl", action="store_true", help="일괄을 건너뛰고 바로 역별 탐색")
-    ap.add_argument("--out", default=os.path.join(ROOT, "data", "network.json"))
+    ap.add_argument("--out", default=os.path.join(ROOT, "frontend", "data", "network.json"))
     ap.add_argument("--no-embed", action="store_true", help="index.html 에 노선도 넣지 않기")
     args = ap.parse_args()
 
@@ -274,7 +274,7 @@ def main():
 
 def embed_snapshot(text):
     """index.html 안에도 노선도를 넣어 둠 → index.html 파일 하나만 올려도 전체 노선으로 동작."""
-    path = os.path.join(ROOT, "index.html")
+    path = os.path.join(ROOT, "frontend", "index.html")
     with open(path, encoding="utf-8") as f:
         html = f.read()
     pat = re.compile(r'(<script type="application/json" id="netSnapshot">).*?(</script>)', re.S)

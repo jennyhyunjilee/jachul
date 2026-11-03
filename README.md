@@ -1,50 +1,50 @@
 # 쟈철
 
 늦기 전에 먼저 보채는 지하철 에이전트. 목적지·도착 시간·준비 시간을 넣으면
-서울시 실시간 지하철 도착정보로 "언제 준비하고 언제 나가야 하는지"를 반말로 보챈다.
-
-## 실행
-
-1. [서울 열린데이터광장](https://data.seoul.go.kr)에서 **실시간 지하철 인증키**를 발급받는다.
-2. `.env.example`을 `.env`로 복사하고 키를 넣는다.
-3. 전체 노선도 만들기 (운행 시간에 한 번):
-
-   ```bash
-   python3 build_network.py
-   ```
-
-4. 서버 실행 후 http://localhost:5173
-
-   ```bash
-   python3 server.py
-   ```
-
-## 서버에 올리기
-
-| 올리는 방법 | 되는 것 |
-|---|---|
-| `index.html` 하나만 (정적 호스팅) | 전체 노선·경로·보채기 전부. 열차 시각은 배차 간격으로 **추정** |
-| 폴더 전체 + `python3 server.py` (+ `.env`) | 위에 더해 **실시간 열차 위치·도착 시각** |
-
-`index.html` 안에 전체 노선도가 들어 있어서 파일 하나만 올려도 된다
-(`build_network.py`를 돌리면 자동으로 갱신됨).
-실시간은 API 키를 숨겨야 하고 서울시 API가 http라서, 브라우저가 직접 못 부르고 서버(`server.py`)가 꼭 필요하다.
-
-
-## (선택) 채팅에 Claude 연결
-
-채팅창에 직접 쓴 질문을 Claude가 상황(목표·계획·경로)을 보고 반말로 대답한다.
-없으면 내장 대답(키워드 매칭 + 여러 말투)으로 동작한다.
-
-1. Python 3.10 이상에서 `pip install -r requirements.txt`
-2. `.env`에 `ANTHROPIC_API_KEY=...` 추가 (console.anthropic.com 에서 발급, 사용량만큼 과금)
-3. `python3 server.py` 다시 실행 → 시작 메시지에 "Claude 채팅 켜짐"
-
-모델은 `claude-opus-5-5` (effort low), 바꾸려면 `.env`에 `CLAUDE_MODEL=...`.
+언제 준비하고 언제 나가야 하는지 반말로 알려준다. 회원은 로그인해서 내 경로를 저장한다.
 
 ## 구조
 
-- `index.html`: 화면 전부 (목표 카드 · 에이전트 · 다이얼 · 경로 · 실시간 열차)
-- `server.py`: 페이지 제공 + 실시간 API 프록시 (키는 서버에만 있음, 역별 20초 캐시)
-- `build_network.py`: 실시간 도착정보(일괄)의 이전역/다음역으로 전체 노선도 생성 → `data/network.json`
-- `lines.py`: 노선 색·평균 소요·배차 간격
+| 폴더 | 배포 | 내용 |
+| --- | --- | --- |
+| `frontend/` | **Vercel** | 화면 전부 (index.html, app.js, *.mjs, 노선도 `data/network.json`), 로그인 `auth.mjs`, 주소 설정 `config.js` |
+| `backend/` | **Render** | API 서버 `app.py` (음성 → 목표: OpenAI 프록시 `ai_proxy.py`). 키는 여기 환경변수에만 |
+| `supabase/` | **Supabase** | DB 마이그레이션: `members`(회원 명부), `user_routes`(회원별 저장 경로). 둘 다 RLS로 본인 것만 |
+| `tools/` | — | 노선도 만들기 `build_network.py`, 회원 명부 등록 `seed_members.py` |
+| `tests/` | — | `npm test` |
+| `legacy/` | — | 예전 한 파일 버전용 서버·빌드 (지금은 안 씀) |
+
+`회원_명부.txt`(이름 TAB 이메일)는 개인정보라 `.gitignore`로 빼 둠. 절대 커밋하지 않는다.
+
+## 로컬 실행
+
+```bash
+python3 backend/app.py      # http://127.0.0.1:5183 (프론트+API 같이)
+npm test
+```
+
+## 로그인 흐름
+
+1. 회원은 명부로 미리 등록돼 있다 (`members` + Supabase Auth 계정).
+2. 처음 온 회원: 로그인 → **처음 왔어? 비밀번호 만들기** → 이메일 입력 → 메일 링크를 누르면
+   사이트로 돌아와 **새 비밀번호 정하기** 창이 뜬다. 비밀번호를 잊었을 때도 같은 방법.
+3. 로그인하면 즐겨찾기·자주 가는 일정이 `user_routes`에 저장되고, 다른 기기에서도 같이 보인다.
+4. 명부(`members`)에 없는 계정으로 로그인하면 바로 로그아웃시킨다.
+
+명부를 바꾸면: `.env`에 `SUPABASE_SERVICE_ROLE_KEY`를 넣고 `python3 tools/seed_members.py`
+(새 회원 계정을 비밀번호 없이 만들고, 메일은 보내지 않음).
+
+## 배포
+
+**Supabase** (한 번만, 대시보드에서)
+- Authentication → URL Configuration: Site URL `https://jachul.vercel.app`, Redirect URLs에 `https://jachul.vercel.app/**`, `http://127.0.0.1:5183/**` 추가
+- Authentication → Sign In / Providers → **Allow new users to sign up 끄기** (명부 회원만)
+- Authentication → Emails → **SMTP Settings**: 기본 메일 서버는 프로젝트 팀원에게만 메일을 보낸다.
+  회원들이 비밀번호 메일을 받으려면 Gmail·Resend 같은 SMTP를 연결해야 한다.
+
+**Render** (백엔드)
+- New → Blueprint → 이 저장소 선택 → `render.yaml` 그대로 → `OPENAI_API_KEY` 입력
+- 서비스 이름이 `jachul-api`가 아니면 `frontend/config.js`의 `apiBase` 주소를 바꾼다.
+
+**Vercel** (프론트)
+- GitHub 연결돼 있으면 푸시하면 자동 배포. 루트 `vercel.json`이 `frontend/`만 올린다.

@@ -1,10 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
-import {MIN,DEFAULTS,migrate,graph,getRoute,steps,targetTime,estimateJourney,calculate,comparison,ReminderGate} from '../core.mjs';
-import {HomeMonitor,distance} from '../location.mjs';
-import {LocalProvider} from '../provider.mjs';
-const network=JSON.parse(await readFile(new URL('../data/network.json',import.meta.url)));
+import {MIN,DEFAULTS,migrate,graph,getRoute,steps,targetTime,estimateJourney,calculate,comparison,ReminderGate} from '../frontend/core.mjs';
+import {HomeMonitor,distance} from '../frontend/location.mjs';
+import {LocalProvider} from '../frontend/provider.mjs';
+const network=JSON.parse(await readFile(new URL('../frontend/data/network.json',import.meta.url)));
 const g=graph(network),route=getRoute(g,'홍대입구','이대'),transfer=getRoute(g,'이대','한강진');
 const t=Date.parse('2026-10-27T10:00:00+09:00'),s={...DEFAULTS,from:'홍대입구',to:'이대',date:'2026-10-27',arrive:'12:00',goal:true,stepAt:t};
 test('local graph uses real station pairs, rejects same and missing',()=>{assert.ok(route.length);assert.ok(transfer.length>1);assert.equal(getRoute(g,'이대','이대'),null);assert.equal(getRoute(g,'없는역','이대'),null);assert.equal(getRoute(graph({nodes:{a:{n:'A',l:'1'},b:{n:'B',l:'1'}},edges:[],lines:{'1':{ride:2,h:4}}}),'A','B'),null);});
