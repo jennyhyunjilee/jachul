@@ -1,12 +1,12 @@
 # Vercel은 frontend/ 화면만 배포한다. 백엔드는 Render, DB는 Supabase.
-backend/
-supabase/
-tools/
-tests/
-legacy/
-output/
-dist/
-data/
+/backend/
+/supabase/
+/tools/
+/tests/
+/legacy/
+/output/
+/dist/
+/data/
 .idea/
 .claude/
 *.py
