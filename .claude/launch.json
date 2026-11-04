@@ -1,6 +1,6 @@
 {
   "version": "0.0.1",
   "configurations": [
-    { "name": "web", "runtimeExecutable": "python3", "runtimeArgs": ["server.py"], "port": 5173 }
+    { "name": "jachul", "runtimeExecutable": "python3", "runtimeArgs": ["backend/app.py", "--port", "5174"], "port": 5174 }
   ]
 }
