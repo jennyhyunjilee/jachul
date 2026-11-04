@@ -335,7 +335,7 @@ svg.dial{max-width:min(300px,100%)}
 .livebar .livehead .mini{padding:2px 8px}
 .livehead{display:flex;align-items:center;gap:8px}
 .livehead h2{flex:1;min-width:0;font-size:14px;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.livebar svg.strip{display:block;width:100%;height:clamp(66px,9vh,96px);margin:0}
+.livebar svg.strip{display:block;width:100%;height:clamp(75px,10.6vh,106px);margin:0}
 #liveHint{display:none}
 .livebar .hint{font-size:12px;margin:0}
 #liveCap{font-weight:700;color:var(--ink)}
@@ -387,7 +387,9 @@ dialog[open]{animation:rise .25s steps(3,end)}
   #offset,#liveClock,#sDial .dialhead h2,#dialCard .moodline{display:none}
   #dialCard{position:relative;padding-top:10px !important;padding-bottom:10px !important}
   #sDial .dialhead{position:absolute;top:8px;right:8px;z-index:1}
-  svg.dial{max-width:min(224px,26vh,100%);margin-top:0}
+  #sDial .two{flex:1 1 auto}
+  #dialCard{flex:1 1 auto;justify-content:center}
+  svg.dial{flex:1 1 0;width:100%;max-width:none;min-height:min(200px,24vh);max-height:min(330px,44vh);margin-top:0}
   #moodCard{padding-block:10px !important}
   .moodbody{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
   #dialCard .legend{margin-top:2px}
@@ -505,7 +507,7 @@ dialog[open]{animation:rise .25s steps(3,end)}
   <footer class="card livebar preview" id="livebar">
     <div class="livehead"><h2 id="liveTitle">지금 오는 열차</h2><button type="button" class="mini needgoal" id="liveMore" aria-expanded="false">목록</button></div>
     <p class="ghost">목표 정하면 네가 탈 역으로 오는 열차를 보여줄게.</p>
-    <svg class="strip" id="strip" viewBox="0 31 340 154" role="img" aria-label="다가오는 열차 위치"></svg>
+    <svg class="strip" id="strip" viewBox="0 31 340 138" role="img" aria-label="다가오는 열차 위치"></svg>
     <p class="hint" id="liveCap"></p>
     <p class="hint" id="liveHint"></p>
     <ul class="trains" id="trains" hidden></ul>
@@ -1680,8 +1682,8 @@ function renderLive(p){
   const trip = currentTrip(p), leg = trip.sim.legs[0], m = meta(leg.l);
   const up = upstream(leg, 6), stations = [leg.ids[0], ...up];
   // 상자 높이는 고정이고, 넓은 화면이면 역 사이를 넓혀서 가로를 꽉 채움
-  const box = $("strip").getBoundingClientRect(), VW = box.width && box.height ? Math.max(340, Math.round(box.width / box.height * 154)) : 340;
-  $("strip").setAttribute("viewBox", `0 31 ${VW} 154`);
+  const box = $("strip").getBoundingClientRect(), VW = box.width && box.height ? Math.max(340, Math.round(box.width / box.height * 138)) : 340;
+  $("strip").setAttribute("viewBox", `0 31 ${VW} 138`);
   const x1 = VW - 44, gap = (x1 - 28)/6, xOf = k => x1 - k*gap, y = 96;
   let svg = `<line x1="${xOf(stations.length-1)-10}" y1="${y}" x2="${x1+26}" y2="${y}" stroke="${m.c}" stroke-width="9" stroke-linecap="round"/>`;
   svg += `<line x1="${xOf(stations.length-1)-10}" y1="${y}" x2="${x1+26}" y2="${y}" stroke="#fff" stroke-opacity=".55" stroke-width="2" stroke-dasharray="2 9"/>`;
@@ -1690,7 +1692,7 @@ function renderLive(p){
     if(k === 0){
       svg += `<circle cx="${x}" cy="${y}" r="9" fill="var(--accent)" stroke="var(--line)" stroke-width="2.5"/>`;
       const short = n.length>5 ? n.slice(0,4)+"…" : n;
-      svg += burstSvg(`여기! ${short}`, Math.min(x - 18, 340 - 62), y + 54);
+      svg += burstSvg(`여기! ${short}`, Math.min(x - 18, VW - 62), y + 37);
     } else {
       svg += `<circle cx="${x}" cy="${y}" r="5.5" fill="var(--card)" stroke="var(--line)" stroke-width="2"/>`;
       svg += `<text x="${x}" y="${y+22}" text-anchor="middle" font-size="10" fill="var(--muted)">${n.length>5?n.slice(0,4)+"…":n}</text>`;
