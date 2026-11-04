@@ -555,7 +555,7 @@ dialog[open]{animation:rise .25s steps(3,end)}
 <!-- 역 고르기 -->
 <dialog id="picker">
   <div class="sheet">
-    <h2 id="pickerTitle">역 고르기</h2>
+    <div class="khead"><h2 id="pickerTitle">역 고르기</h2><button type="button" class="kclose" id="pickerX" aria-label="닫기">✕</button></div>
     <input id="pickerSearch" type="search" placeholder="역 이름이나 초성 (예: 강남, ㄱㄴ)" autocomplete="off">
     <ul class="list" id="pickerList"></ul>
     <button class="save" id="pickerClose" style="background:var(--chip);color:var(--ink)">닫기</button>
@@ -576,7 +576,7 @@ dialog[open]{animation:rise .25s steps(3,end)}
 <!-- 자주 안 바꾸는 설정 -->
 <dialog id="settings">
   <form class="sheet" id="form" method="dialog">
-    <h2>설정</h2>
+    <div class="khead"><h2>설정</h2><button type="button" class="kclose" id="settingsX" aria-label="닫기 (저장 안 함)">✕</button></div>
     <p class="hint">한 번 넣으면 이대로 기억해.</p>
     <div class="grid">
       <div><label for="walkTo">집 → 출발역 도보 (분)</label><input id="walkTo" name="walkTo" type="number" min="0"></div>
@@ -1961,6 +1961,8 @@ $("toMe").addEventListener("click", () => go(2));
 
 // ---- 알람 모달 ----
 $("alarmClose").addEventListener("click", () => $("alarm").close());
+$("pickerX").addEventListener("click", () => $("picker").close());
+$("settingsX").addEventListener("click", () => $("settings").close());   // ✕는 저장 안 하고 닫기
 $("alarmOk").addEventListener("click", () => $("alarm").close());
 $("alarm").addEventListener("click", e => { if(e.target === $("alarm")) $("alarm").close(); });
 for(const [id, polite, label] of [["copyExcuse", false, "늦는다고 보낼 말 복사"], ["copyExcusePolite", true, "존댓말로 복사"]]){
