@@ -129,12 +129,21 @@ input[type=range]{width:100%;accent-color:var(--travel)}
 .runner .fb,.avatars .fb{opacity:0}
 .kidbtn{display:inline-flex;align-items:center;gap:8px;padding:6px 14px 6px 8px}
 .kidbtn svg{width:36px;height:36px;display:block}
-#kidDialog .sheet{max-height:86vh;overflow:auto}
+/* 캐릭터·탭·적용 버튼은 고정, 고르는 칸만 칸마다 따로 스크롤 */
+#kidDialog .sheet{height:min(86vh,720px);overflow:hidden;display:flex;flex-direction:column}
+#kidDialog .khead,#kidDialog .kpreview,#kidApply{flex:none}
+.ktabs{flex:none;display:flex;gap:6px;margin:4px 0 2px}
+.ktabs button{flex:1;min-width:0;padding:8px 0;font-size:13px;background:var(--card)}
+.ktabs button.on{background:var(--accent);color:var(--accentInk)}
+#kidOptions{flex:1 1 auto;min-height:0;display:flex;flex-direction:column;gap:4px}
+.kbox{flex:1 1 0;min-height:0;display:flex;flex-direction:column}
+.kscroll{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:2px 8px 8px 2px;border-top:2px dashed var(--line)}
+#kidApply{margin-top:10px}
 .khead{display:flex;justify-content:space-between;align-items:center}
 .kclose{width:40px;height:40px;padding:0;font-size:18px}
 .kpreview{position:relative;width:120px;height:120px;margin:8px auto 4px;cursor:default}
 .kpreview svg{width:100%;height:100%}
-#kidOptions h3{font-size:14px;margin:16px 0 8px}
+#kidOptions h3{flex:none;font-size:14px;margin:10px 0 6px}
 .kgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(72px,1fr));gap:8px}
 .kopt{display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 2px;font-size:11px;background:var(--card)}
 .kopt svg{width:46px;height:46px}
@@ -522,6 +531,7 @@ dialog[open]{animation:rise .25s steps(3,end)}
   <div class="sheet">
     <div class="khead"><h2 id="kidTitle">내 캐릭터 꾸미기</h2><button type="button" class="kclose" id="kidClose" aria-label="닫기">✕</button></div>
     <div class="kpreview runner moving" id="kidPreview"></div>
+    <div class="ktabs" id="kidTabs" role="tablist" aria-label="꾸밀 부분"></div>
     <div id="kidOptions"></div>
     <button type="button" class="save" id="kidApply">적용</button>
   </div>
@@ -1384,7 +1394,9 @@ function runnerSvg(cfg = kidCfg()){
 let gpsKnown = false, leftAt = null;   // leftAt: GPS로 집을 벗어난 걸 처음 본 시각
 
 // ---- 캐릭터 꾸미기 팝업: 고르는 동안은 미리보기만, '적용' 눌러야 저장. X는 그냥 닫기 ----
-let kidDraft = null;
+let kidDraft = null, kidTab = 0;
+// 탭 하나에 [모양, 색] 칸 두 개. 칸마다 따로 스크롤
+const KID_TABS = [["머리", "hair", "hairColor"], ["상의", "top", "topColor"], ["하의", "bottom", "bottomColor"], ["신발", "shoes"]];
 function openKid(){
   kidDraft = kidCfg();
   renderKid();
@@ -1398,15 +1410,17 @@ function renderKid(){
     opt(group, k, label, runnerSvg({...kidDraft, [group]: k}))).join("");
   const colorRow = (group, list) => list.map(name =>
     `<button type="button" class="swatch ${kidDraft[group] === name ? "on" : ""}" data-g="${group}" data-v="${name}" aria-pressed="${kidDraft[group] === name}" title="${name}" style="--sw:${PALETTE[name]}"><i></i><span>${name}</span></button>`).join("");
-  $("kidOptions").innerHTML = `
-    <h3>머리</h3><div class="kgrid">${styleRow("hair")}</div>
-    <h3>머리색</h3><div class="sgrid">${colorRow("hairColor", HAIR_COLORS)}</div>
-    <h3>상의</h3><div class="kgrid">${styleRow("top")}</div>
-    <h3>상의 색</h3><div class="sgrid">${colorRow("topColor", CLOTH_COLORS)}</div>
-    <h3>하의</h3><div class="kgrid">${styleRow("bottom")}</div>
-    <h3>하의 색</h3><div class="sgrid">${colorRow("bottomColor", CLOTH_COLORS)}</div>
-    <h3>신발</h3><div class="kgrid">${styleRow("shoes")}</div>`;
+  // 고를 때마다 다시 그려도 보던 자리는 그대로
+  const box = $("kidOptions"), keep = box.dataset.tab === String(kidTab) ? [...box.querySelectorAll(".kscroll")].map(el => el.scrollTop) : [];
+  $("kidTabs").innerHTML = KID_TABS.map(([name], i) =>
+    `<button type="button" role="tab" data-tab="${i}" class="${i === kidTab ? "on" : ""}" aria-selected="${i === kidTab}">${name}</button>`).join("");
+  const [name, style, color] = KID_TABS[kidTab];
+  box.innerHTML = `<section class="kbox"><h3>${name}</h3><div class="kscroll"><div class="kgrid">${styleRow(style)}</div></div></section>`
+    + (color ? `<section class="kbox"><h3>${name} 색</h3><div class="kscroll"><div class="sgrid">${colorRow(color, style === "hair" ? HAIR_COLORS : CLOTH_COLORS)}</div></div></section>` : "");
+  box.dataset.tab = kidTab;
+  box.querySelectorAll(".kscroll").forEach((el, i) => { el.scrollTop = keep[i] || 0; });
 }
+$("kidTabs").addEventListener("click", e => { const b = e.target.closest("[data-tab]"); if(!b) return; kidTab = Number(b.dataset.tab); renderKid(); });
 // 어디쯤 있는지: GPS로 집에 있으면 '집에서 나가기'에 서 있음, 집을 벗어났으면 계획 시각대로 경로를 따라 달림
 function placeRunner(times, homeIdx){
   const route = $("route"), dots = [...route.querySelectorAll(".dot")];
