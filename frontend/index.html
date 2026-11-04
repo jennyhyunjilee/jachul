@@ -311,14 +311,27 @@ body{overflow:hidden}
 #moodTitle{font-size:22px}
 .m-free #moodTitle{color:var(--ok)}
 svg.dial{max-width:min(300px,100%)}
+/* 원 카드 색: 여유 초록 → 빠듯할수록 주황·빨강 → 왕창 늦으면 검정 (JS가 --card를 이어서 바꿈) */
+.dialwrap{--ringFree:var(--free)}
+.tinted{--ringFree:#ffffff;transition:background-color .9s linear}
+.tinted button{background:#ffffff;color:#111111}
+.dialwrap .center-res{fill:var(--ink)}
+.dial .now-clock{font-size:13px;fill:var(--ink);font-family:"GalmuriMono11","Galmuri11",monospace;letter-spacing:.04em}
+.dial .tickhead{transform-box:fill-box;transform-origin:center;animation:tickpop .35s steps(2,end)}
+@keyframes tickpop{from{transform:scale(1.9)}to{transform:scale(1)}}
+/* 지금 상황: 버튼 셋을 원 바로 밑에 한 줄로 */
+.side{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.side > .qbtn{order:1;padding:10px 4px;font-size:13px;line-height:1.25}
+.side > .moodcard{order:2;grid-column:1 / -1}
+.qbtn .lg{display:none}
 
 /* 맨 밑 열차 바 */
 .livebar{flex:none;padding:8px 12px !important}
 .livehead{display:flex;align-items:center;gap:8px}
 .livehead h2{flex:1;min-width:0;font-size:14px;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.livebar svg.strip{width:100%;height:auto;max-height:min(118px,15vh);margin:2px 0 0}
+.livebar svg.strip{display:block;width:100%;height:clamp(84px,12vh,118px);margin:0}
 #liveHint{display:none}
-.livebar .hint{font-size:12px}
+.livebar .hint{font-size:12px;margin:0}
 #liveCap{font-weight:700;color:var(--ink)}
 .livebar .trains{max-height:24vh;overflow:auto;margin-top:6px}
 .livebar .ghost{margin-top:6px;padding:8px;font-size:13px}
@@ -337,6 +350,7 @@ dialog[open]{animation:rise .25s steps(3,end)}
 .arow2{display:flex;gap:8px;flex-wrap:wrap}
 .arow2 .save{flex:1;margin-top:6px}
 .arow2 #copyExcuse,.arow2 #copyExcusePolite{flex:1 1 40%;margin-top:6px}
+@media (prefers-reduced-motion: reduce){ .dial .tickhead{animation:none} }
 @media (prefers-reduced-motion: reduce){ .mic.rec,.m-late .moodline,.m-doomed .moodline,.slide.active .two > *,.slide.active > .set,dialog[open]{animation:none} }
 
 .toast{position:fixed;left:50%;bottom:max(16px, env(safe-area-inset-bottom, 0px));transform:translateX(-50%);z-index:20;width:min(420px,calc(100% - 32px));background:var(--card);color:var(--ink);padding:10px 14px;font-size:14px;border-style:solid;border-width:6px;border-image:var(--pxb) 2 / 6px / 0 stretch;background-clip:padding-box;filter:drop-shadow(4px 4px 0 var(--shadow))}
@@ -355,11 +369,22 @@ dialog[open]{animation:rise .25s steps(3,end)}
   .set{max-width:420px;align-self:center}
   svg.dial{max-width:min(340px,100%)}
   .goal-head{font-size:30px}
-  .livebar svg.strip{max-height:min(124px,14vh)}
   #liveHint{display:block}
+  .qbtn .lg{display:inline}
+  .side{grid-template-columns:1fr}
+  .side > .qbtn{padding:12px;font-size:15px}
   .livebar .hint{display:inline;margin-right:12px}
 }
-@media (max-height:640px){ .livebar svg.strip{max-height:96px} .tagline{display:none} }
+@media (max-height:640px){ .tagline{display:none} }
+@media (max-width:859px){
+  #offset,#liveClock{display:none}
+  svg.dial{max-width:min(250px,31vh,100%);margin-top:0}
+  .moodline{font-size:19px;margin-top:2px}
+  #dialCard .legend{margin-top:2px}
+  #moodTitle{font-size:17px;margin:0}
+  .moodbody{font-size:14px;margin:4px 0 0}
+  #sDial .two{gap:10px}
+}
 </style>
 <script src="config.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.js"></script>
@@ -425,7 +450,7 @@ dialog[open]{animation:rise .25s steps(3,end)}
           <svg class="dial" id="dial" viewBox="0 0 300 300" role="img" aria-label="출발 시각 다이얼. 가운데 누르면 쟈철이 말해줌"></svg>
           <input type="range" id="offset" min="0" max="60" value="0" aria-label="몇 분 뒤 출발할지">
           <div class="legend">
-            <span><i style="background:var(--free)"></i>여유</span>
+            <span><i style="background:var(--ringFree)"></i>여유</span>
             <span><i style="background:var(--prep)"></i>준비</span>
             <span><i style="background:var(--travel)"></i>이동</span>
           </div>
@@ -437,9 +462,9 @@ dialog[open]{animation:rise .25s steps(3,end)}
             <p class="moodbody" id="moodBody"></p>
             <p class="hint mono" id="liveClock"></p>
           </section>
-          <button class="ask needgoal" id="ask">쟈철한테 물어봐</button>
-          <button type="button" class="needgoal" id="toMe">내 실시간 모습 보기 →</button>
-          <button type="button" class="needgoal" id="bellBtn">🔔 늦으면 알림 받기</button>
+          <button class="ask needgoal qbtn" id="ask">💬 <span class="lg">쟈철한테 </span>물어봐</button>
+          <button type="button" class="needgoal qbtn" id="toMe">🏃 내 <span class="lg">실시간 </span>모습<span class="lg"> 보기 →</span></button>
+          <button type="button" class="needgoal qbtn" id="bellBtn">🔔 <span class="lg">늦으면 </span>알림<span class="lg"> 받기</span></button>
         </div>
       </div>
     </section>
@@ -470,7 +495,7 @@ dialog[open]{animation:rise .25s steps(3,end)}
   <footer class="card livebar preview" id="livebar">
     <div class="livehead"><h2 id="liveTitle">지금 오는 열차</h2><button type="button" class="mini needgoal" id="liveMore" aria-expanded="false">목록</button></div>
     <p class="ghost">목표 정하면 네가 탈 역으로 오는 열차를 보여줄게.</p>
-    <svg class="strip" id="strip" viewBox="0 22 340 164" role="img" aria-label="다가오는 열차 위치"></svg>
+    <svg class="strip" id="strip" viewBox="0 31 340 154" role="img" aria-label="다가오는 열차 위치"></svg>
     <p class="hint" id="liveCap"></p>
     <p class="hint" id="liveHint"></p>
     <ul class="trains" id="trains" hidden></ul>
@@ -950,7 +975,8 @@ const MOODS = {
   doomed: {ring:"걍 가지마. 집에서 자.",    alarm:"겁나 늦음. 늦는다고 죄송하다는 메시지라도 갈겨."},
 };
 function moodOf(p){
-  const t = now(), r = simulate(leaveNow()), sl = slackOf(r, p.target);
+  const t = now(), trip = currentTrip(p), r = trip.gone ? trip.sim : simulate(leaveNow()), sl = slackOf(r, p.target);
+  if(trip.gone) return {k: t > p.target || sl <= -30 ? "doomed" : sl < 0 ? "late" : "free", sl};
   if(t > p.target || (r.cut && sl < 0) || sl <= -30) return {k:"doomed", sl};
   if(sl < 0) return {k:"late", sl};
   if(t >= p.leave - 5*MIN) return {k:"go", sl};
@@ -1186,7 +1212,7 @@ function drawDial(p){
   const r = simulate(leaveNow() + selOffset*MIN), sl = slackOf(r, p.target);
   const color = sl >= 5 ? "var(--ok)" : sl >= 0 ? "var(--prep)" : "var(--late)";
   const res = r.cut && sl < 0 ? `막차 끊김 · 첫차 ${hhmm(r.cut.board)}`
-    : sl >= 0 ? `${s.arrive} 목표에 ${dur(sl)} 남음` : `${s.arrive} 목표에 ${dur(-sl)} 지각`;
+    : sl >= 0 ? `목표까지 ${dur(sl)} 여유` : `목표보다 ${dur(-sl)} 지각`;
   const [kx,ky] = polar(selOffset / W * 360);
   const ticks = [0,.25,.5,.75].map(f=>{
     // 좌우 눈금은 원 바깥쪽으로 붙여서 링이랑 안 겹치게
@@ -1197,9 +1223,23 @@ function drawDial(p){
     if(m >= 60 && m % 60) return `<text x="${x}" y="${y-3}" text-anchor="${side}" class="center-sm"><tspan x="${x}">+${Math.floor(m/60)}시간</tspan><tspan x="${x}" dy="13">${m%60}분</tspan></text>`;
     return `<text x="${x}" y="${y+4}" text-anchor="${side}" class="center-sm">${f ? "+"+dur(m) : "지금"}</text>`;
   }).join("");
+  // 째깍: 안쪽 눈금 60개를 초침이 한 칸씩 돌고, 지나간 칸은 꼬리처럼 흐려짐
+  const T = new Date(t), sec = T.getSeconds();
+  let face = "";
+  for(let i = 0; i < 60; i++){
+    const big = i % 5 === 0, age = (sec - i + 60) % 60;
+    const op = age === 0 ? 1 : age < 10 ? .9 - age*.06 : big ? .55 : .3;
+    const [x0, y0] = polar(i*6, R - 14), [x1, y1] = polar(i*6, R - (big ? 23 : 19));
+    face += `<line x1="${x0.toFixed(1)}" y1="${y0.toFixed(1)}" x2="${x1.toFixed(1)}" y2="${y1.toFixed(1)}" stroke="var(--ink)" stroke-opacity="${op.toFixed(2)}" stroke-width="${age === 0 ? 3.2 : big ? 2.2 : 1.4}"/>`;
+  }
+  const [hx, hy] = polar(sec*6, R - 19);
+  face += `<rect class="tickhead" x="${(hx-4).toFixed(1)}" y="${(hy-4).toFixed(1)}" width="8" height="8" fill="var(--ink)"/>`;
+  const clockTxt = [T.getHours(), T.getMinutes(), sec].map(n => String(n).padStart(2, "0")).join(":");
   $("dial").innerHTML = `
     <circle cx="${CX}" cy="${CY}" r="${R}" fill="none" stroke="var(--soft)" stroke-width="18"/>
-    <path d="${arc(0, deg(p.prepStart))}" stroke="var(--free)" stroke-width="18" fill="none"/>
+    ${face}
+    <text x="${CX}" y="${CY-58}" text-anchor="middle" class="now-clock">${clockTxt}</text>
+    <path d="${arc(0, deg(p.prepStart))}" stroke="var(--ringFree)" stroke-width="18" fill="none"/>
     <path d="${arc(deg(p.prepStart), deg(p.leave))}" stroke="var(--prep)" stroke-width="18" fill="none"/>
     <path d="${arc(deg(p.leave), deg(p.target))}" stroke="var(--travel)" stroke-width="18" fill="none"/>
     ${ticks}
@@ -1605,7 +1645,10 @@ function renderLive(p){
   const t = now(), past = t > p.leave;
   const trip = currentTrip(p), leg = trip.sim.legs[0], m = meta(leg.l);
   const up = upstream(leg, 6), stations = [leg.ids[0], ...up];
-  const x1 = 296, gap = (x1 - 28)/6, xOf = k => x1 - k*gap, y = 96;
+  // 상자 높이는 고정이고, 넓은 화면이면 역 사이를 넓혀서 가로를 꽉 채움
+  const box = $("strip").getBoundingClientRect(), VW = box.width && box.height ? Math.max(340, Math.round(box.width / box.height * 154)) : 340;
+  $("strip").setAttribute("viewBox", `0 31 ${VW} 154`);
+  const x1 = VW - 44, gap = (x1 - 28)/6, xOf = k => x1 - k*gap, y = 96;
   let svg = `<line x1="${xOf(stations.length-1)-10}" y1="${y}" x2="${x1+26}" y2="${y}" stroke="${m.c}" stroke-width="9" stroke-linecap="round"/>`;
   svg += `<line x1="${xOf(stations.length-1)-10}" y1="${y}" x2="${x1+26}" y2="${y}" stroke="#fff" stroke-opacity=".55" stroke-width="2" stroke-dasharray="2 9"/>`;
   stations.forEach((id, k) => {
@@ -1757,11 +1800,21 @@ function tick(){
 }
 // 원·상태 카드: 1초마다 흐르게
 let lastMood = null;
+// 여유 분(sl)으로 이어지는 색: 20분 넘게 여유면 초록, 0분까지 주황·빨강으로, 늦으면 점점 검정
+function moodColor(md){
+  if(md.k === "doomed") return "hsl(0 0% 7%)";
+  const c = x => Math.max(0, Math.min(1, x));
+  if(md.sl >= 0){ const f = c(md.sl / 20); return `hsl(${Math.round(4 + 141*f)} ${Math.round(72 - 14*f)}% ${Math.round(46 - 8*f)}%)`; }
+  const f = c(-md.sl / 30); return `hsl(4 ${Math.round(78 - 40*f)}% ${Math.round(46 - 36*f)}%)`;
+}
 function renderMood(p){
-  const md = moodOf(p), M = MOODS[md.k];
+  const md = moodOf(p), M = MOODS[md.k], col = moodColor(md);
   for(const id of ["dialCard", "moodCard"]){
     const el = $(id);
-    el.classList.remove("m-free","m-soon","m-prep","m-go","m-late","m-doomed"); el.classList.add("m-" + md.k);
+    if(!el.classList.contains("tinted")){ el.style.transition = "none"; requestAnimationFrame(() => requestAnimationFrame(() => { el.style.transition = ""; })); }   // 처음엔 바로, 그 뒤로는 천천히 색이 변함
+    el.classList.remove("m-free","m-soon","m-prep","m-go","m-late","m-doomed"); el.classList.add("m-" + md.k, "tinted");
+    el.style.setProperty("--card", col); el.style.setProperty("--ink", "#ffffff");
+    el.style.setProperty("--muted", "rgba(255,255,255,.78)"); el.style.setProperty("--soft", "rgba(255,255,255,.22)");
   }
   $("moodLine").textContent = M.ring;
   if(md.k !== lastMood){
@@ -1848,7 +1901,7 @@ deck.addEventListener("scroll", () => {
   const i = Math.round(deck.scrollLeft / Math.max(1, deck.clientWidth));
   if(i !== cur){ cur = i; markSlide(); }
 }, {passive:true});
-addEventListener("resize", () => deck.scrollTo({left: cur * deck.clientWidth}));
+addEventListener("resize", () => { deck.scrollTo({left: cur * deck.clientWidth}); if(NET && ready()) renderLive(plan()); });   // 열차 띠 비율 다시
 $("tabs").addEventListener("click", e => { const b = e.target.closest("[data-go]"); if(b) go(Number(b.dataset.go)); });
 document.addEventListener("keydown", e => {
   if(document.querySelector("dialog[open]") || e.target.closest("input,textarea,select")) return;
