@@ -1477,7 +1477,7 @@ function renderKid(){
     `<button type="button" role="tab" data-tab="${i}" class="${i === kidTab ? "on" : ""}" aria-selected="${i === kidTab}">${name}</button>`).join("");
   const [name, style, color] = KID_TABS[kidTab];
   box.innerHTML = `<section class="kbox"><h3>${name}</h3><div class="kscroll"><div class="kgrid">${styleRow(style)}</div></div></section>`
-    + (color && !(style === "shoes" && kidDraft.shoes === "barefoot") ? `<section class="kbox"><h3>${name} 색</h3><div class="kscroll"><div class="sgrid">${colorRow(color, style === "hair" ? HAIR_COLORS : CLOTH_COLORS)}</div></div></section>` : "");
+    + (color ? `<section class="kbox"><h3>${name} 색</h3><div class="kscroll"><div class="sgrid">${colorRow(color, style === "hair" ? HAIR_COLORS : CLOTH_COLORS)}</div></div></section>` : "");
   box.dataset.tab = kidTab;
   box.querySelectorAll(".kscroll").forEach((el, i) => { el.scrollTop = keep[i] || 0; });
 }
@@ -1887,6 +1887,7 @@ $("kidApply").addEventListener("click", () => { s.kid = kidDraft; store.set(s); 
 $("kidOptions").addEventListener("click", e => {
   const b = e.target.closest("[data-g]"); if(!b) return;
   if(b.dataset.g === "shoes" && kidDraft.shoesColor === SHOE_DEFAULT[kidDraft.shoes]) kidDraft.shoesColor = SHOE_DEFAULT[b.dataset.v];   // 색 안 바꿨으면 새 신발 기본색
+  if(b.dataset.g === "shoesColor" && kidDraft.shoes === "barefoot") kidDraft.shoes = "sneakers";   // 맨발인데 색 고르면 그 색 운동화
   kidDraft[b.dataset.g] = b.dataset.v; renderKid();
 });
 // 경로 위 캐릭터를 누르면 꾸미기 팝업
