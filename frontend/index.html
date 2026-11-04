@@ -257,6 +257,16 @@ body{overflow:hidden}
 .pick{position:relative;flex:none;width:22px;height:30px;display:grid;place-items:center;font-size:14px;color:var(--goalMuted)}
 .pick:hover{color:var(--goalInk)}
 .pick select{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;font-size:16px}
+.hm{gap:2px}
+/* 폰에서 칸이 좁아도 숫자 두 자리는 보이게 */
+.stepper{gap:3px}
+.stepper input{min-width:3.3ch}
+.stepper button{width:26px;height:28px}
+.pick{width:24px;font-size:15px}
+.hm input{flex:1 1 0;min-width:0;width:2.4ch;text-align:center;font:inherit;font-family:"GalmuriMono11","Galmuri11",monospace;font-size:18px;font-weight:700;background:transparent;border:none;color:var(--goalInk);padding:0;outline:none}
+.hm input:focus{background:rgba(255,255,255,.1)}
+.hm input.bad{color:var(--late)}
+.hm .colon{font-size:18px;flex:none}
 .stepper input::-webkit-outer-spin-button,.stepper input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
 .field:focus-within{background:rgba(255,255,255,.14)}
 .goal-err{margin:8px 0 0;font-size:13px;color:var(--late);min-height:0}
@@ -377,7 +387,7 @@ dialog[open]{animation:rise .25s steps(3,end)}
             <button class="field" id="toBtn"><small>어디서 내려?</small><span class="v" id="toV"></span></button>
           </div>
           <div class="goal-row">
-            <label class="field"><small>몇 시까지?</small><span class="pickrow"><input id="arriveIn" type="text" inputmode="text" autocomplete="off" placeholder="9:30" maxlength="12"><span class="pick" aria-hidden="true">▾<select id="arrivePick" aria-label="도착 시간 고르기" tabindex="-1"></select></span></span></label>
+            <div class="field"><small>몇 시까지?</small><span class="pickrow hm"><input id="arrH" type="text" inputmode="numeric" autocomplete="off" placeholder="09" maxlength="2" aria-label="몇 시"><span class="pick" aria-hidden="true">▾<select id="arrHPick" aria-label="시 고르기" tabindex="-1"></select></span><b class="colon">:</b><input id="arrM" type="text" inputmode="numeric" autocomplete="off" placeholder="30" maxlength="2" aria-label="몇 분"><span class="pick" aria-hidden="true">▾<select id="arrMPick" aria-label="분 고르기" tabindex="-1"></select></span></span></div>
             <div class="field"><small>준비 시간 (분)</small>
               <div class="stepper"><button type="button" id="prepMinus" aria-label="준비 시간 5분 줄이기">−</button><input id="prepIn" type="number" inputmode="numeric" min="0" max="180" aria-label="준비 시간 (분)"><span class="pick" aria-hidden="true">▾<select id="prepPick" aria-label="준비 시간 고르기" tabindex="-1"></select></span><button type="button" id="prepPlus" aria-label="준비 시간 5분 늘리기">+</button></div>
             </div>
@@ -976,7 +986,7 @@ function renderGoal(){
   const setV = (el, name) => { el.classList.toggle("empty", !name); el.innerHTML = name ? `${name} ${badges(name)}` : "역 골라"; };
   setV($("fromV"), s.from); setV($("toV"), s.to);
   const ae = document.activeElement;
-  if(ae !== $("arriveIn") && !$("arriveIn").classList.contains("bad")) $("arriveIn").value = s.arrive;
+  if(ae !== $("arrH") && ae !== $("arrM") && !$("arrH").classList.contains("bad")){ const [h, m] = (s.arrive || ":").split(":"); $("arrH").value = h || ""; $("arrM").value = m || ""; }
   if(ae !== $("prepIn")) $("prepIn").value = s.prep;
   const sb = $("setBtn");
   sb.disabled = !ready();
@@ -1026,37 +1036,65 @@ function parseTime(raw){
   }
   return `${String(h).padStart(2,"0")}:${String(m).padStart(2,"0")}`;
 }
+// ---- 몇 시까지: 시·분 따로. 치거나 ▾로 고름 ----
+// 지하철 다니는 시간(전체 노선 중 가장 이른 첫차 ~ 가장 늦은 막차) 안에서만. 23시 다음은 00시.
+const SVC = (() => { const ms = Object.values(LINE_META); return {first: Math.min(...ms.map(m => hm(m.first)/MIN)), last: Math.max(...ms.map(m => hm(m.last)/MIN))}; })();
+const pad2 = n => String(n).padStart(2, "0");
+const clock = t => `${t % 1440 / 60 | 0}:${pad2(t % 60)}`;
+const inSvc = (h, m) => { let t = h*60 + m; if(t < SVC.first) t += 1440; return t <= SVC.last; };
+const SVC_TXT = `첫차 ${clock(SVC.first)} ~ 막차 ${clock(SVC.last)}`;
+function arriveBad(msg){ $("arrH").classList.toggle("bad", !!msg); $("arrM").classList.toggle("bad", !!msg); $("goalErr").textContent = msg || ""; }
 function commitArrive(){
-  const el = $("arriveIn"), v = parseTime(el.value);
-  if(!el.value.trim()){ el.classList.remove("bad"); $("goalErr").textContent = ""; return; }
-  if(!v){ el.classList.add("bad"); $("goalErr").textContent = `"${el.value}"는 시간으로 못 읽겠어. 930, 9:30, 오후 3시처럼 써.`; return; }
-  el.classList.remove("bad"); $("goalErr").textContent = ""; el.value = v;
+  const hs = $("arrH").value.trim(), ms = $("arrM").value.trim();
+  if(!hs && !ms){ arriveBad(""); return; }
+  if(!hs) return arriveBad("몇 시인지도 넣어.");
+  const h = Number(hs), m = ms ? Number(ms) : 0;
+  if(!inSvc(h, m)) return arriveBad(`${h}:${pad2(m)}엔 지하철 안 다녀. ${SVC_TXT} 사이로 해.`);
+  arriveBad("");
+  const v = `${pad2(h)}:${pad2(m)}`;
+  $("arrH").value = pad2(h); $("arrM").value = pad2(m);
   if(v !== s.arrive){ s.arrive = v; goalChanged(); }
 }
-// ▾ 드롭메뉴: 시간은 5:00~23:50 10분 간격, 준비 시간은 0~120분 5분 간격
+// 칠 때: 숫자만. 시는 23 넘으면 00, 분은 60 넘게는 못 침
+$("arrH").addEventListener("input", e => {
+  const el = e.target; el.value = el.value.replace(/\D/g, "").slice(0, 2);
+  if(Number(el.value) > 23) el.value = "00";
+  if(el.value.length === 2 || Number(el.value) > 2) $("arrM").focus();   // 3~9는 한 자리로 끝
+});
+$("arrM").addEventListener("input", e => {
+  const el = e.target; el.value = el.value.replace(/\D/g, "").slice(0, 2);
+  if(Number(el.value) > 59) el.value = el.value.slice(0, 1);
+});
+for(const id of ["arrH", "arrM"]){
+  $(id).addEventListener("change", commitArrive);
+  $(id).addEventListener("keydown", e => { if(e.key === "Enter"){ e.preventDefault(); commitArrive(); e.target.blur(); } });
+}
+$("arrM").addEventListener("keydown", e => { if(e.key === "Backspace" && !e.target.value) $("arrH").focus(); });
+// ▾ 드롭메뉴: 시는 첫차~막차 시간대(05 … 23, 00, 01), 분은 5분 간격. 준비 시간은 0~120분 5분 간격
 {
-  const pad = n => String(n).padStart(2, "0");
   const opt = (v, t) => `<option value="${v}">${t}</option>`;
-  let h = '<option value="" disabled>몇 시까지?</option>';
-  for(let t = 5*60; t < 24*60; t += 10) h += opt(`${pad(Math.floor(t/60))}:${pad(t%60)}`, `${Math.floor(t/60)}:${pad(t%60)}`);
-  $("arrivePick").innerHTML = h;
+  let h = '<option value="" disabled>시</option>';
+  for(let t = Math.floor(SVC.first/60); t <= Math.floor(SVC.last/60); t++) h += opt(pad2(t % 24), `${pad2(t % 24)}시`);
+  $("arrHPick").innerHTML = h;
+  h = '<option value="" disabled>분</option>';
+  for(let m = 0; m < 60; m += 5) h += opt(pad2(m), `${pad2(m)}분`);
+  $("arrMPick").innerHTML = h;
   h = '<option value="" disabled>준비 시간</option>';
   for(let m = 0; m <= 120; m += 5) h += opt(m, `${m}분`);
   $("prepPick").innerHTML = h;
-  // 열 때 지금 값 근처가 보이게
+  // 열 때 지금 값이 보이게
   const near = (sel, v) => { const o = [...sel.options].find(o => o.value === String(v)); sel.value = o ? o.value : ""; };
-  $("arrivePick").addEventListener("pointerdown", () => near($("arrivePick"), s.arrive));
+  $("arrHPick").addEventListener("pointerdown", () => near($("arrHPick"), pad2(Number($("arrH").value || 9))));
+  $("arrMPick").addEventListener("pointerdown", () => near($("arrMPick"), pad2(Math.round(Number($("arrM").value || 0) / 5) * 5 % 60)));
   $("prepPick").addEventListener("pointerdown", () => near($("prepPick"), Math.round(s.prep / 5) * 5));
-  $("arrivePick").addEventListener("change", e => {   // 고른 건 24시간 그대로 (오전·오후 추측 안 함)
-    const v = e.target.value, el = $("arriveIn");
-    el.value = v; el.classList.remove("bad"); $("goalErr").textContent = "";
-    if(v !== s.arrive){ s.arrive = v; goalChanged(); }
+  $("arrHPick").addEventListener("change", e => {
+    $("arrH").value = e.target.value;
+    if(!$("arrM").value) $("arrM").value = inSvc(Number(e.target.value), 0) ? "00" : pad2(Math.ceil(SVC.first % 60 / 5) * 5);   // 05시면 첫차 뒤로
+    commitArrive();
   });
+  $("arrMPick").addEventListener("change", e => { $("arrM").value = e.target.value; if($("arrH").value) commitArrive(); else $("arrH").focus(); });
   $("prepPick").addEventListener("change", e => { setPrep(e.target.value); $("prepIn").value = s.prep; });
 }
-$("arriveIn").addEventListener("change", commitArrive);
-$("arriveIn").addEventListener("keydown", e => { if(e.key === "Enter"){ e.preventDefault(); commitArrive(); e.target.blur(); } });
-$("arriveIn").addEventListener("input", e => { if(e.target.classList.contains("bad") && parseTime(e.target.value)){ e.target.classList.remove("bad"); $("goalErr").textContent = ""; } });
 const setPrep = v => { v = Math.round(Number(v)); if(!Number.isFinite(v)) return false; v = Math.max(0, Math.min(180, v)); if(v !== s.prep){ s.prep = v; goalChanged(); } return true; };
 $("prepIn").addEventListener("input", e => { if(e.target.value !== "") setPrep(e.target.value); });
 $("prepIn").addEventListener("change", e => { if(!setPrep(e.target.value) || e.target.value === "") e.target.value = s.prep; else e.target.value = s.prep; });
@@ -1801,7 +1839,7 @@ markSlide();
 
 // 세팅: 저장하고 원 화면으로 넘어간 뒤 알람처럼 한마디
 $("setBtn").addEventListener("click", () => {
-  if($("arriveIn").value.trim() && parseTime($("arriveIn").value) !== s.arrive) commitArrive();
+  if($("arrH").value.trim() && `${pad2(Number($("arrH").value))}:${pad2(Number($("arrM").value || 0))}` !== s.arrive) commitArrive();
   if(!ready()) return;
   s.armed = true; exampleMode = false; store.set(s);
   sent.clear(); lastPhase = current().phase; lastMood = null;
@@ -1882,7 +1920,7 @@ function applyNl(){
   if(!d) return nlHint("못 알아들었어. 역 이름이랑 시간을 같이 말해줘. 예: 홍대입구에서 강남 9시까지");
   Object.assign(s, g);
   if(g.from || g.to) s.recent = [...new Set([g.to, g.from, ...s.recent].filter(Boolean))].slice(0, 5);
-  $("arriveIn").classList.remove("bad"); $("goalErr").textContent = "";
+  arriveBad("");
   goalChanged();
   nlHint(`채웠어: ${d}.${ready() ? " 맞으면 '세팅' 눌러." : " 빠진 건 위에서 골라."}`, true);
 }
