@@ -1070,14 +1070,14 @@ for(const id of ["arrH", "arrM"]){
   $(id).addEventListener("keydown", e => { if(e.key === "Enter"){ e.preventDefault(); commitArrive(); e.target.blur(); } });
 }
 $("arrM").addEventListener("keydown", e => { if(e.key === "Backspace" && !e.target.value) $("arrH").focus(); });
-// ▾ 드롭메뉴: 시는 첫차~막차 시간대(05 … 23, 00, 01), 분은 5분 간격. 준비 시간은 0~120분 5분 간격
+// ▾ 드롭메뉴: 시는 첫차~막차 시간대(05 … 23, 00, 01), 분은 00~59 전부. 준비 시간은 0~120분 5분 간격
 {
   const opt = (v, t) => `<option value="${v}">${t}</option>`;
   let h = '<option value="" disabled>시</option>';
   for(let t = Math.floor(SVC.first/60); t <= Math.floor(SVC.last/60); t++) h += opt(pad2(t % 24), `${pad2(t % 24)}시`);
   $("arrHPick").innerHTML = h;
   h = '<option value="" disabled>분</option>';
-  for(let m = 0; m < 60; m += 5) h += opt(pad2(m), `${pad2(m)}분`);
+  for(let m = 0; m < 60; m++) h += opt(pad2(m), `${pad2(m)}분`);
   $("arrMPick").innerHTML = h;
   h = '<option value="" disabled>준비 시간</option>';
   for(let m = 0; m <= 120; m += 5) h += opt(m, `${m}분`);
@@ -1085,11 +1085,11 @@ $("arrM").addEventListener("keydown", e => { if(e.key === "Backspace" && !e.targ
   // 열 때 지금 값이 보이게
   const near = (sel, v) => { const o = [...sel.options].find(o => o.value === String(v)); sel.value = o ? o.value : ""; };
   $("arrHPick").addEventListener("pointerdown", () => near($("arrHPick"), pad2(Number($("arrH").value || 9))));
-  $("arrMPick").addEventListener("pointerdown", () => near($("arrMPick"), pad2(Math.round(Number($("arrM").value || 0) / 5) * 5 % 60)));
+  $("arrMPick").addEventListener("pointerdown", () => near($("arrMPick"), pad2(Number($("arrM").value || 0))));
   $("prepPick").addEventListener("pointerdown", () => near($("prepPick"), Math.round(s.prep / 5) * 5));
   $("arrHPick").addEventListener("change", e => {
     $("arrH").value = e.target.value;
-    if(!$("arrM").value) $("arrM").value = inSvc(Number(e.target.value), 0) ? "00" : pad2(Math.ceil(SVC.first % 60 / 5) * 5);   // 05시면 첫차 뒤로
+    if(!$("arrM").value) $("arrM").value = inSvc(Number(e.target.value), 0) ? "00" : pad2(SVC.first % 60);   // 05시면 첫차 뒤로
     commitArrive();
   });
   $("arrMPick").addEventListener("change", e => { $("arrM").value = e.target.value; if($("arrH").value) commitArrive(); else $("arrH").focus(); });
