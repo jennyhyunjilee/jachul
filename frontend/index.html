@@ -1327,7 +1327,8 @@ const KID_OPTS = {
   bottom: {pants:"바지", shorts:"반바지", mini:"미니스커트", longSkirt:"롱스커트", dress:"원피스"},
   shoes:  {sneakers:"운동화", dressShoes:"구두", sandals:"샌들", barefoot:"맨발"},
 };
-const KID_DEFAULT = {hair:"longStraight", hairColor:"검정", top:"tee", topColor:"분홍", bottom:"pants", bottomColor:"청록", shoes:"sneakers"};
+const KID_DEFAULT = {hair:"longStraight", hairColor:"검정", top:"tee", topColor:"분홍", bottom:"pants", bottomColor:"청록", shoes:"sneakers", shoesColor:"흰색"};
+const SHOE_DEFAULT = {sneakers:"흰색", dressShoes:"검정", sandals:"브라운", barefoot:"흰색"};   // 신발 바꾸면 색도 그 신발 기본색으로
 const SKIN = "#ffe0c2", INK = "#111";
 const shade = (hex, amt) => {   // amt < 0 어둡게, > 0 밝게
   const n = parseInt(hex.slice(1), 16), f = c => Math.round(amt < 0 ? c * (1 + amt) : c + (255 - c) * amt);
@@ -1358,21 +1359,34 @@ function kidHead(cfg){
   const g = Array.from({length: 11}, () => Array(18).fill(null));
   const span = [[6,11],[4,13],[3,14],[2,15],[2,15],[2,15],[2,15],[2,15],[2,15],[2,15],[2,15]];
   const st = cfg.hair, bald = st === "bald", mohi = st === "mohican", pomade = st === "pomade";
-  const curly = st === "shortPerm" || st === "longPerm", longish = st === "longStraight" || st === "longPerm" || st === "bob";
-  const hair = (x, y) => curly ? ((x + y) % 2 ? Hd : H) : pomade && (x - y === 4 || x - y === 5) ? Hl : H;
+  const curly = st === "shortPerm" || st === "longPerm", long = st === "longStraight" || st === "longPerm", bob = st === "bob";
+  // 짧은 머리(숏컷 셋·모히칸): 관자놀이까지만, 귀·턱 옆은 맨살
+  const short = st === "shortBasic" || st === "shortPerm" || pomade || mohi;
+  const hair = (x, y) => curly ? ((x + y) % 2 ? Hd : H) : pomade && (x - y === 4 || x - y === 5 || x - y === 8) ? Hl : H;
+  // 앞머리(5번째 줄): 숏컷 기본은 옆으로 넘김, 파마는 꼬불꼬불, 포마드는 이마 다 보임, 단발은 일자 뱅
+  const fringe = x => bald || mohi ? false
+    : st === "shortBasic" ? x <= 8 || x === 14
+    : st === "shortPerm" ? x % 2 === 1 || x === 14
+    : pomade ? x === 3 || x === 14
+    : bob ? true
+    : x === 7 || x === 8 || x === 3 || x === 4 || x === 13 || x === 14;   // 긴 머리·포니테일: 가운데 가르마
   span.forEach(([a, b], y) => {
     for(let x = a; x <= b; x++){
       const edge = y === 0 || x === a || x === b || (y === 1 && (x === a + 1 || x === b - 1));
+      const side = x === 3 || x === 14, side2 = x === 4 || x === 13;
       let c;
       if(edge) c = INK;
       else if(y <= 4) c = bald || (mohi && (x < 7 || x > 10)) ? SKIN : hair(x, y);               // 정수리
-      else if(y === 5 && (x === 7 || x === 8)) c = bald || mohi || pomade ? SKIN : hair(x, y);    // 앞머리
-      else if((x === 3 || x === 14 || (y === 5 && (x === 4 || x === 13))) && y <= 9) c = bald || mohi ? SKIN : hair(x, y);   // 옆머리
-      else if(y === 10 && (x <= 4 || x >= 13)) c = longish || st === "ponytail" || st === "shortBasic" || st === "shortPerm" ? hair(x, y) : "jaw";
+      else if(y === 5) c = fringe(x) ? hair(x, y) : SKIN;                                          // 앞머리
+      else if(side && y === 6) c = bald || mohi ? SKIN : hair(x, y);                               // 관자놀이
+      else if(side && y <= 9) c = long || bob || st === "ponytail" || (st === "shortPerm" && y === 7) ? hair(x, y) : SKIN;   // 옆머리
+      else if(side2 && y >= 6 && y <= 10 && bob) c = hair(x, y);                                   // 단발: 볼 옆까지 두툼하게
+      else if(y === 10 && (x <= 4 || x >= 13)) c = long || bob ? hair(x, y) : "jaw";
       else c = SKIN;
       g[y][x] = c;
     }
   });
+  if(short) for(const y of [7, 8]){ g[y][2] = g[y][15] = SKIN; g[y][1] = g[y][16] = INK; }   // 귀: 얼굴 밖으로 한 칸
   // 머리 짧거나 없으면 턱 옆은 비우고 테두리 안쪽으로
   for(const x of [2, 15]) if(g[10][x === 2 ? 3 : 14] === "jaw") g[10][x] = null;
   for(const x of [3, 14]) if(g[10][x] === "jaw") g[10][x] = INK;
@@ -1400,8 +1414,8 @@ function kidGrid(cfg, body){
       case "L": return cfg.top === "coat" && !dress ? T : P;
       case "G": return cfg.bottom === "pants" ? P : cfg.bottom === "shorts" && y === 15 ? P
                     : cfg.top === "coat" && y === 15 ? T : SKIN;
-      case "F": return cfg.shoes === "sneakers" ? "#f4f4f4" : cfg.shoes === "dressShoes" ? "#2b2b2b"
-                    : cfg.shoes === "sandals" ? ((x + y) % 2 ? "#8a5a3a" : SKIN) : SKIN;
+      case "F": { const S = PALETTE[cfg.shoesColor] || PALETTE[SHOE_DEFAULT[cfg.shoes]] || "#f4f4f4";
+        return cfg.shoes === "barefoot" ? SKIN : cfg.shoes === "sandals" ? ((x + y) % 2 ? S : SKIN) : cfg.shoes === "dressShoes" ? shade(S, -.15) : S; }
       default: return null;
     }
   }));
@@ -1415,7 +1429,7 @@ function kidGrid(cfg, body){
   // 긴 머리·단발은 몸 뒤로 내려오는 머리카락 (빈칸에만)
   const back = cfg.hair === "longStraight" || cfg.hair === "longPerm"
     ? {11: ["kHH","HHk"], 12: ["kHH","HHk"], 13: ["kHk","kHk"], 14: [".kk","kk."]}
-    : cfg.hair === "bob" ? {11: ["kHk","kHk"], 12: [".k.",".k."]} : {};
+    : cfg.hair === "bob" ? {11: ["kHH","HHk"], 12: ["kkk","kkk"]} : {};
   for(const [y, [l, r]] of Object.entries(back)){
     [...l].forEach((c, i) => { if(c !== "." && !grid[y][2+i]) grid[y][2+i] = c === "k" ? INK : (cfg.hair === "longPerm" && (y % 2) ? Hd : H); });
     [...r].forEach((c, i) => { if(c !== "." && !grid[y][13+i]) grid[y][13+i] = c === "k" ? INK : (cfg.hair === "longPerm" && (y % 2) ? Hd : H); });
@@ -1443,7 +1457,7 @@ let gpsKnown = false, leftAt = null;   // leftAt: GPS로 집을 벗어난 걸 �
 // ---- 캐릭터 꾸미기 팝업: 고르는 동안은 미리보기만, '적용' 눌러야 저장. X는 그냥 닫기 ----
 let kidDraft = null, kidTab = 0;
 // 탭 하나에 [모양, 색] 칸 두 개. 칸마다 따로 스크롤
-const KID_TABS = [["머리", "hair", "hairColor"], ["상의", "top", "topColor"], ["하의", "bottom", "bottomColor"], ["신발", "shoes"]];
+const KID_TABS = [["머리", "hair", "hairColor"], ["상의", "top", "topColor"], ["하의", "bottom", "bottomColor"], ["신발", "shoes", "shoesColor"]];
 function openKid(){
   kidDraft = kidCfg();
   renderKid();
@@ -1463,7 +1477,7 @@ function renderKid(){
     `<button type="button" role="tab" data-tab="${i}" class="${i === kidTab ? "on" : ""}" aria-selected="${i === kidTab}">${name}</button>`).join("");
   const [name, style, color] = KID_TABS[kidTab];
   box.innerHTML = `<section class="kbox"><h3>${name}</h3><div class="kscroll"><div class="kgrid">${styleRow(style)}</div></div></section>`
-    + (color ? `<section class="kbox"><h3>${name} 색</h3><div class="kscroll"><div class="sgrid">${colorRow(color, style === "hair" ? HAIR_COLORS : CLOTH_COLORS)}</div></div></section>` : "");
+    + (color && !(style === "shoes" && kidDraft.shoes === "barefoot") ? `<section class="kbox"><h3>${name} 색</h3><div class="kscroll"><div class="sgrid">${colorRow(color, style === "hair" ? HAIR_COLORS : CLOTH_COLORS)}</div></div></section>` : "");
   box.dataset.tab = kidTab;
   box.querySelectorAll(".kscroll").forEach((el, i) => { el.scrollTop = keep[i] || 0; });
 }
@@ -1872,6 +1886,7 @@ $("kidClose").addEventListener("click", () => $("kidDialog").close());
 $("kidApply").addEventListener("click", () => { s.kid = kidDraft; store.set(s); $("kidDialog").close(); $("kidMini").innerHTML = $("kidMini2").innerHTML = runnerSvg(); tick(); });
 $("kidOptions").addEventListener("click", e => {
   const b = e.target.closest("[data-g]"); if(!b) return;
+  if(b.dataset.g === "shoes" && kidDraft.shoesColor === SHOE_DEFAULT[kidDraft.shoes]) kidDraft.shoesColor = SHOE_DEFAULT[b.dataset.v];   // 색 안 바꿨으면 새 신발 기본색
   kidDraft[b.dataset.g] = b.dataset.v; renderKid();
 });
 // 경로 위 캐릭터를 누르면 꾸미기 팝업
