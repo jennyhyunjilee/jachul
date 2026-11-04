@@ -1896,25 +1896,43 @@ function setListening(on){
   $("micBtn").classList.toggle("rec", on); $("micBtn").setAttribute("aria-pressed", on);
   $("nlText").classList.toggle("rec", on);
 }
+// 말하다 잠깐 멈춰도 안 끊기게: 마지막 말 뒤 QUIET만큼 조용해야 끝남 (처음엔 FIRST까지 기다림).
+// 브라우저가 먼저 끊으면 이어서 다시 들음.
+const QUIET = 3500, FIRST = 10000;
+let keepOn = false, quietTimer = null;
+const armQuiet = ms => { clearTimeout(quietTimer); quietTimer = setTimeout(() => { keepOn = false; try{ rec.stop(); }catch{} }, ms); };
 $("micBtn").addEventListener("click", () => {
-  if(listening){ try{ rec.stop(); }catch{} return; }
+  if(listening){ keepOn = false; clearTimeout(quietTimer); try{ rec.stop(); }catch{} return; }
   if(!SR) return nlHint("이 브라우저는 말하기를 못 받아. 크롬이나 사파리에서 열거나, 그냥 쳐.");
-  rec = new SR(); rec.lang = "ko-KR"; rec.interimResults = true; rec.continuous = false; rec.maxAlternatives = 1;
-  let gotAny = false;
-  rec.onstart = () => { setListening(true); $("nlText").value = ""; $("nlHint").innerHTML = `<span class="live"></span>듣는 중… 말해.`; $("nlHint").classList.remove("ok"); };
+  rec = new SR(); rec.lang = "ko-KR"; rec.interimResults = true; rec.continuous = true; rec.maxAlternatives = 1;
+  let gotAny = false, base = "", errored = false;
+  keepOn = true;
+  $("nlText").value = "";
+  rec.onstart = () => { setListening(true); armQuiet(gotAny ? QUIET : FIRST); if(!gotAny){ $("nlHint").innerHTML = `<span class="live"></span>듣는 중… 말해. 다 말하면 잠깐 기다리거나 마이크 눌러.`; $("nlHint").classList.remove("ok"); } };
   rec.onresult = e => {
     let txt = "";
     for(const r of e.results) txt += r[0].transcript;
+    txt = (base + txt).trim();
     gotAny = true; $("nlText").value = txt; $("nlText").scrollTop = 1e6;
+    armQuiet(QUIET);
     const g = parseGoal(txt), d = describe(g);
     $("nlHint").innerHTML = `<span class="live"></span>`; $("nlHint").append(d ? `알아들은 거: ${d}` : "듣는 중…");
   };
   rec.onerror = e => {
+    if(e.error === "no-speech" && keepOn) return;   // 조용했던 것뿐: 시간 남았으면 계속 들음
+    if(e.error === "aborted") return;
+    keepOn = false; errored = true;
     nlHint(e.error === "not-allowed" || e.error === "service-not-allowed" ? "마이크가 막혀 있어. 주소창 옆 자물쇠에서 마이크 허용해줘."
       : e.error === "no-speech" ? "아무 말도 안 들렸어. 마이크 다시 눌러." : e.error === "network" ? "음성 인식 서버에 못 붙었어. 인터넷 확인하거나 그냥 쳐." : `못 알아들었어 (${e.error}). 다시 눌러.`);
   };
-  rec.onend = () => { setListening(false); if(gotAny && $("nlText").value.trim()) applyNl(); };
-  try{ rec.start(); }catch{ setListening(false); }
+  rec.onend = () => {
+    if(keepOn){ base = $("nlText").value ? $("nlText").value + " " : ""; try{ rec.start(); return; }catch{} }
+    clearTimeout(quietTimer); keepOn = false;
+    setListening(false);
+    if(gotAny && $("nlText").value.trim()) applyNl();
+    else if(!gotAny && !errored) nlHint("아무 말도 안 들렸어. 마이크 다시 눌러.");
+  };
+  try{ rec.start(); }catch{ keepOn = false; setListening(false); }
 });
 
 // ---- 내 경로 (지금은 이 기기에만. 로그인 붙으면 여기 목록을 서버랑 맞추면 됨) ----
