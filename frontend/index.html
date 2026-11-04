@@ -137,6 +137,10 @@ input[type=range]{width:100%;accent-color:var(--travel)}
 .ktabs button.on{background:var(--accent);color:var(--accentInk)}
 #kidOptions{flex:1 1 auto;min-height:0;display:flex;flex-direction:column;gap:4px}
 .kbox{flex:1 1 0;min-height:0;display:flex;flex-direction:column}
+.kbox.kpick{flex:none}
+.kgrid.ktwo{grid-template-columns:repeat(2,minmax(0,1fr))}
+.kgrid.ktwo .kopt{flex-direction:row;justify-content:center;gap:6px;padding:4px}
+.kgrid.ktwo .kopt svg{width:34px;height:34px}
 .kscroll{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:2px 8px 8px 2px;border-top:2px dashed var(--line)}
 #kidApply{margin-top:10px}
 .khead{display:flex;justify-content:space-between;align-items:center}
@@ -310,6 +314,7 @@ body{overflow:hidden}
 .moodbody{margin:6px 0 4px;font-size:15px}
 #moodTitle{font-size:22px}
 .m-free #moodTitle{color:var(--ok)}
+.tinted #moodTitle{color:var(--ink)}
 svg.dial{max-width:min(300px,100%)}
 /* 원 카드 색: 여유 초록 → 빠듯할수록 주황·빨강 → 왕창 늦으면 검정 (JS가 --card를 이어서 바꿈) */
 .dialwrap{--ringFree:var(--free)}
@@ -326,10 +331,11 @@ svg.dial{max-width:min(300px,100%)}
 .qbtn .lg{display:none}
 
 /* 맨 밑 열차 바 */
-.livebar{flex:none;padding:8px 12px !important}
+.livebar{flex:none;padding:6px 12px !important}
+.livebar .livehead .mini{padding:2px 8px}
 .livehead{display:flex;align-items:center;gap:8px}
 .livehead h2{flex:1;min-width:0;font-size:14px;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.livebar svg.strip{display:block;width:100%;height:clamp(84px,12vh,118px);margin:0}
+.livebar svg.strip{display:block;width:100%;height:clamp(66px,9vh,96px);margin:0}
 #liveHint{display:none}
 .livebar .hint{font-size:12px;margin:0}
 #liveCap{font-weight:700;color:var(--ink)}
@@ -377,9 +383,13 @@ dialog[open]{animation:rise .25s steps(3,end)}
 }
 @media (max-height:640px){ .tagline{display:none} }
 @media (max-width:859px){
-  #offset,#liveClock{display:none}
-  svg.dial{max-width:min(250px,31vh,100%);margin-top:0}
-  .moodline{font-size:19px;margin-top:2px}
+  /* 폰: 원·버튼·상태 카드가 스크롤 없이 한 화면에 */
+  #offset,#liveClock,#sDial .dialhead h2,#dialCard .moodline{display:none}
+  #dialCard{position:relative;padding-top:10px !important;padding-bottom:10px !important}
+  #sDial .dialhead{position:absolute;top:8px;right:8px;z-index:1}
+  svg.dial{max-width:min(224px,26vh,100%);margin-top:0}
+  #moodCard{padding-block:10px !important}
+  .moodbody{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
   #dialCard .legend{margin-top:2px}
   #moodTitle{font-size:17px;margin:0}
   .moodbody{font-size:14px;margin:4px 0 0}
@@ -1322,12 +1332,15 @@ const PALETTE = {
 const HAIR_COLORS = ["빨강","주황","노랑","초록","파랑","남색","보라","검정","흰색","금색","브라운"];
 const CLOTH_COLORS = ["빨강","주황","노랑","초록","파랑","남색","보라","검정","흰색","분홍","하늘","회색","청록","베이지","브라운"];
 const KID_OPTS = {
-  hair:   {shortBasic:"숏컷 기본", shortPerm:"숏컷 파마", pomade:"숏컷 포마드", mohican:"모히칸", ponytail:"포니테일", bald:"민머리", longStraight:"긴생머리", longPerm:"긴파마", bob:"단발"},
+  hair:   {longStraight:"긴생머리", longPerm:"긴파마", bob:"단발", ponytail:"포니테일", shortBasic:"숏컷 기본", shortPerm:"숏컷 파마", pomade:"숏컷 포마드", mohican:"모히칸", bald:"민머리"},
+  bangs:  {yes:"앞머리 있음", no:"앞머리 없음"},
   top:    {tee:"반팔", long:"긴팔", coat:"코트", knit:"니트", sleeveless:"나시"},
   bottom: {pants:"바지", shorts:"반바지", mini:"미니스커트", longSkirt:"롱스커트", dress:"원피스"},
   shoes:  {sneakers:"운동화", dressShoes:"구두", sandals:"샌들", barefoot:"맨발"},
 };
 const KID_DEFAULT = {hair:"longStraight", hairColor:"검정", top:"tee", topColor:"분홍", bottom:"pants", bottomColor:"청록", shoes:"sneakers", shoesColor:"흰색"};
+// 앞머리 안 골랐으면 머리마다 원래 모습: 긴 머리·포니테일은 가르마, 나머지는 앞머리 있음
+const bangsOf = cfg => cfg.bangs || (["longStraight", "longPerm", "ponytail"].includes(cfg.hair) ? "no" : "yes");
 const SHOE_DEFAULT = {sneakers:"흰색", dressShoes:"검정", sandals:"브라운", barefoot:"흰색"};   // 신발 바꾸면 색도 그 신발 기본색으로
 const SKIN = "#ffe0c2", INK = "#111";
 const shade = (hex, amt) => {   // amt < 0 어둡게, > 0 밝게
@@ -1364,12 +1377,13 @@ function kidHead(cfg){
   const short = st === "shortBasic" || st === "shortPerm" || pomade || mohi;
   const hair = (x, y) => curly ? ((x + y) % 2 ? Hd : H) : pomade && (x - y === 4 || x - y === 5 || x - y === 8) ? Hl : H;
   // 앞머리(5번째 줄): 숏컷 기본은 옆으로 넘김, 파마는 꼬불꼬불, 포마드는 이마 다 보임, 단발은 일자 뱅
+  // 앞머리 없음: 이마 다 보이고 옆만 (긴 머리는 가운데 가르마). 있음: 머리마다 다른 앞머리
+  const bangs = bangsOf(cfg) === "yes" && !pomade;
   const fringe = x => bald || mohi ? false
+    : !bangs ? x === 3 || x === 14 || ((long || bob || st === "ponytail") && (x === 4 || x === 13 || x === 7 || x === 8))
     : st === "shortBasic" ? x <= 8 || x === 14
     : st === "shortPerm" ? x % 2 === 1 || x === 14
-    : pomade ? x === 3 || x === 14
-    : bob ? true
-    : x === 7 || x === 8 || x === 3 || x === 4 || x === 13 || x === 14;   // 긴 머리·포니테일: 가운데 가르마
+    : true;   // 긴 머리·단발·포니테일: 이마 덮는 일자 앞머리
   span.forEach(([a, b], y) => {
     for(let x = a; x <= b; x++){
       const edge = y === 0 || x === a || x === b || (y === 1 && (x === a + 1 || x === b - 1));
@@ -1380,7 +1394,7 @@ function kidHead(cfg){
       else if(y === 5) c = fringe(x) ? hair(x, y) : SKIN;                                          // 앞머리
       else if(side && y === 6) c = bald || mohi ? SKIN : hair(x, y);                               // 관자놀이
       else if(side && y <= 9) c = long || bob || st === "ponytail" || (st === "shortPerm" && y === 7) ? hair(x, y) : SKIN;   // 옆머리
-      else if(side2 && y >= 6 && y <= 10 && bob) c = hair(x, y);                                   // 단발: 볼 옆까지 두툼하게
+      else if(side2 && y >= 6 && y <= 9 && bob) c = hair(x, y);                                    // 단발: 볼 옆까지 두툼하게
       else if(y === 10 && (x <= 4 || x >= 13)) c = long || bob ? hair(x, y) : "jaw";
       else c = SKIN;
       g[y][x] = c;
@@ -1429,7 +1443,7 @@ function kidGrid(cfg, body){
   // 긴 머리·단발은 몸 뒤로 내려오는 머리카락 (빈칸에만)
   const back = cfg.hair === "longStraight" || cfg.hair === "longPerm"
     ? {11: ["kHH","HHk"], 12: ["kHH","HHk"], 13: ["kHk","kHk"], 14: [".kk","kk."]}
-    : cfg.hair === "bob" ? {11: ["kHH","HHk"], 12: ["kkk","kkk"]} : {};
+    : cfg.hair === "bob" ? {11: ["kkk","kkk"]} : {};   // 단발은 턱선에서 일자로 끝
   for(const [y, [l, r]] of Object.entries(back)){
     [...l].forEach((c, i) => { if(c !== "." && !grid[y][2+i]) grid[y][2+i] = c === "k" ? INK : (cfg.hair === "longPerm" && (y % 2) ? Hd : H); });
     [...r].forEach((c, i) => { if(c !== "." && !grid[y][13+i]) grid[y][13+i] = c === "k" ? INK : (cfg.hair === "longPerm" && (y % 2) ? Hd : H); });
@@ -1457,9 +1471,15 @@ let gpsKnown = false, leftAt = null;   // leftAt: GPS로 집을 벗어난 걸 �
 // ---- 캐릭터 꾸미기 팝업: 고르는 동안은 미리보기만, '적용' 눌러야 저장. X는 그냥 닫기 ----
 let kidDraft = null, kidTab = 0;
 // 탭 하나에 [모양, 색] 칸 두 개. 칸마다 따로 스크롤
-const KID_TABS = [["머리", "hair", "hairColor"], ["상의", "top", "topColor"], ["하의", "bottom", "bottomColor"], ["신발", "shoes", "shoesColor"]];
+// 탭마다 칸 목록: [제목, 고를 것, 종류] — style은 모양(스크롤), pick은 짧은 선택(고정), color는 색(스크롤)
+const KID_TABS = [
+  ["머리", [["머리", "hair", "style"], ["앞머리", "bangs", "pick"], ["머리 색", "hairColor", "color"]]],
+  ["상의", [["상의", "top", "style"], ["상의 색", "topColor", "color"]]],
+  ["하의", [["하의", "bottom", "style"], ["하의 색", "bottomColor", "color"]]],
+  ["신발", [["신발", "shoes", "style"], ["신발 색", "shoesColor", "color"]]],
+];
 function openKid(){
-  kidDraft = kidCfg();
+  kidDraft = kidCfg(); kidDraft.bangs = bangsOf(kidDraft);
   renderKid();
   $("kidDialog").showModal();
 }
@@ -1475,9 +1495,9 @@ function renderKid(){
   const box = $("kidOptions"), keep = box.dataset.tab === String(kidTab) ? [...box.querySelectorAll(".kscroll")].map(el => el.scrollTop) : [];
   $("kidTabs").innerHTML = KID_TABS.map(([name], i) =>
     `<button type="button" role="tab" data-tab="${i}" class="${i === kidTab ? "on" : ""}" aria-selected="${i === kidTab}">${name}</button>`).join("");
-  const [name, style, color] = KID_TABS[kidTab];
-  box.innerHTML = `<section class="kbox"><h3>${name}</h3><div class="kscroll"><div class="kgrid">${styleRow(style)}</div></div></section>`
-    + (color ? `<section class="kbox"><h3>${name} 색</h3><div class="kscroll"><div class="sgrid">${colorRow(color, style === "hair" ? HAIR_COLORS : CLOTH_COLORS)}</div></div></section>` : "");
+  box.innerHTML = KID_TABS[kidTab][1].map(([title, g, kind]) =>
+    kind === "pick" ? `<section class="kbox kpick"><h3>${title}</h3><div class="kgrid ktwo">${styleRow(g)}</div></section>`
+    : `<section class="kbox"><h3>${title}</h3><div class="kscroll"><div class="${kind === "color" ? "sgrid" : "kgrid"}">${kind === "color" ? colorRow(g, g === "hairColor" ? HAIR_COLORS : CLOTH_COLORS) : styleRow(g)}</div></div></section>`).join("");
   box.dataset.tab = kidTab;
   box.querySelectorAll(".kscroll").forEach((el, i) => { el.scrollTop = keep[i] || 0; });
 }
