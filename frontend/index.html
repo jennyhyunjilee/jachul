@@ -1455,8 +1455,7 @@ function drawDial(p){
   }
   const trail = [-30, -20, -10].map((d, i) => { const [x, y] = polar(d, R - 19); return `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${2 + i}" fill="var(--sweep)" opacity="${.25 + i*.2}"/>`; }).join("");
   const [hx, hy] = polar(0, R - 19);
-  face += `<g class="sweep" style="animation-delay:-${secF.toFixed(2)}s;transform:rotate(${(secF*6).toFixed(1)}deg)">${trail}<line x1="${CX}" y1="${CY-R+10}" x2="${CX}" y2="${CY-R+30}" stroke="#111" stroke-width="6" stroke-linecap="round"/><line x1="${CX}" y1="${CY-R+10}" x2="${CX}" y2="${CY-R+30}" stroke="var(--sweep)" stroke-width="3" stroke-linecap="round"/></g>`;
-  // 초침은 동그라미 대신 가는 바늘: 동그라미는 앞쪽 끝이 다음 눈금에 0.7초 먼저 닿아서 빨라 보였음
+  face += `<g class="sweep" style="animation-delay:-${secF.toFixed(2)}s;transform:rotate(${(secF*6).toFixed(1)}deg)">${trail}<circle cx="${hx}" cy="${hy}" r="6.5" fill="var(--sweep)" stroke="#111" stroke-width="2"/></g>`;
   // 링 위에 '여유/준비/이동' 글씨 (칸이 충분히 길 때만, 손잡이랑 안 겹치게)
   const kdeg = selOffset / W * 360;
   const ringLab = (d0, d1, txt) => {
