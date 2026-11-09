@@ -644,6 +644,7 @@ dialog[open]{animation:rise .25s steps(3,end)}
     <button type="button" class="kidbtn" id="kidFromSettings"><span id="kidMini"></span>꾸미기</button>
     <div class="row">
       <button type="button" id="notifyBtn">알림 켜기</button>
+      <button type="button" id="sfxBtn" aria-pressed="true">효과음 ON</button>
       <button type="button" id="homeBtn">여기가 집이야</button>
       <span class="pill" id="homePill">집 위치 없음</span>
     </div>
@@ -2027,7 +2028,11 @@ function beep(){
   });
 }
 // 손잡이 돌릴 때 딸깍, 지각으로 넘어가면 쿵, 다시 여유면 띠링
+function renderSfx(){ const on = !s.sfxOff; $("sfxBtn").textContent = on ? "🔊 효과음 ON (누르면 끔)" : "🔇 효과음 OFF (누르면 켬)"; $("sfxBtn").setAttribute("aria-pressed", on); }
+$("sfxBtn").addEventListener("click", () => { s.sfxOff = !s.sfxOff; store.set(s); renderSfx(); if(!s.sfxOff){ unlockAudio(); setTimeout(() => sfx("ding"), 30); } });
+renderSfx();
 function sfx(kind){
+  if(s.sfxOff) return;   // 설정에서 효과음 끄면 딸깍·쿵·띠링 안 남
   if(!audioCtx || audioCtx.state !== "running") return;
   const t0 = audioCtx.currentTime, o = audioCtx.createOscillator(), g = audioCtx.createGain();
   o.connect(g).connect(audioCtx.destination);
