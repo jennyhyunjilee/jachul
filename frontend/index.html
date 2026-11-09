@@ -2124,14 +2124,18 @@ function renderMood(p){
     serialSend("MOOD:" + serialMood(md.k));
   }
 }
-setInterval(() => {
+// 매초 다시 그림. setInterval은 초 경계랑 어긋나서 시계 숫자가 초침보다 최대 1초 늦었음
+// → 다음 초가 막 바뀐 순간(+20ms)에 맞춰 그림
+function everySecond(){
+  setTimeout(everySecond, 1020 - (now() % 1000));
   if(!NET) return;
   $("liveClock").textContent = "지금 " + new Date(now()).toLocaleTimeString("ko-KR", {hour12:false});
   if(!ready()) return;
   const p = plan();
   if(!dragging) drawDial(p);
   renderMood(p);
-}, 1000);
+}
+setTimeout(everySecond, 1020 - (Date.now() % 1000));
 
 // ---- GPS ----
 function distM(a,b){
