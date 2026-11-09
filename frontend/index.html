@@ -913,7 +913,7 @@ function judge(p, t){
   // 목표보다 한참 일찍 도착하는 계획이면 막차 때문
   const early = slackOf(p.sim, p.target) > 45 && simulate(p.leave + 15*MIN).cut ? " 막차 때문에 일찍 나가야 돼." : "";
   if(t > p.target) return {phase:"over", level:"late", title:"약속 시간 지났어.", body:"내일 목표 다시 정해."};
-  if(!p.infeasible && toPrep > 10) return {phase:"free", level:"", title:"아직 안 나가도 돼.", body:`${s.arrive}까지 ${s.to} 가려면 준비는 ${dur(toPrep)} 뒤인 ${when(p.prepStart)}부터, 집에서 나가는 건 ${dur(toDep)} 뒤인 ${when(p.leave)}야. ${first.from}에서 ${hhmm(first.board)} 열차 타면 돼.${early}${lastTxt}`};
+  if(!p.infeasible && toPrep > 10) return {phase:"free", prepAt:p.prepStart, level:"", title:"아직 안 나가도 돼.", body:`${s.arrive}까지 ${s.to} 가려면 준비는 ${dur(toPrep)} 뒤인 ${when(p.prepStart)}부터, 집에서 나가는 건 ${dur(toDep)} 뒤인 ${when(p.leave)}야. ${first.from}에서 ${hhmm(first.board)} 열차 타면 돼.${early}${lastTxt}`};
   if(!p.infeasible && toPrep > 0) return {phase:"soon", level:"warn", title:"하던 거 슬슬 정리해.", body:`${toPrep}분 뒤(${hhmm(p.prepStart)})에 준비 시작해야 ${s.arrive}까지 ${s.to} 도착해.${early}${lastTxt}`};
   if(!p.infeasible && toDep > 5) return {phase:"prep", level:lastTxt ? "urgent" : "warn", title:"지금 준비 시작해.", body:`지금 하면 안 뛰어도 돼. ${first.from} ${hhmm(first.board)} 열차${src} 타야 돼.${xf}${early}${lastTxt}`};
   if(!p.infeasible && toDep > 0) return {phase:"shoes", level:"urgent", title:"신발 신어.", body:`${toDep}분 안에(${hhmm(p.leave)}까지) 안 나가면 ${first.from} ${hhmm(first.board)} 열차${src} 놓쳐.${lastTxt}`};
@@ -960,7 +960,7 @@ const TITLES = {
   cut:   ["막차 끊겼어.", "지하철 끝났어."],
 };
 const TAILS = {
-  free:  ["물 한 잔 마셔둬.", "폰 충전은 해놨지?", "지금 낮잠 자면 큰일 나."],
+  free:  ["물 한 잔 마셔둬.", "폰 충전은 해놨지?"],
   soon:  ["유튜브 끄고.", "그 영상 다음 거 보지 마."],
   prep:  ["교통카드 챙겨.", "양말 짝 맞는지 봐.", "거울은 한 번만 봐."],
   shoes: ["이어폰 찾지 말고 그냥 가.", "엘리베이터 기다릴 시간 없어.", "우산 필요하면 지금 챙겨."],
@@ -968,9 +968,17 @@ const TAILS = {
   home:  ["지금 일어나면 아직 늦진 않을 수도 있어."],
   late:  ["사과 문자 미리 써.", "뛰어도 안 돼. 연락부터 해."],
 };
+// 여유 있을 때 한마디는 지금 시간대에 맞게: 밤엔 "자고 일어나서 늦지 마", 낮엔 "낮잠 조심"
+function freeTails(m){
+  const h = new Date(now()).getHours(), wake = m.prepAt ? when(m.prepAt) : "";
+  if(h >= 22 || h < 6) return ["지금은 잘 시간이야. 푹 자.", wake ? `알람 ${wake} 전에 맞춰놓고 자.` : "알람 맞춰놓고 자.", "자고 일어나서 늦으면 안 돼.", "폰 그만 보고 자. 늦잠 자면 큰일 나."];
+  if(h < 11) return [...TAILS.free, "아침은 먹고 가."];
+  if(h < 18) return [...TAILS.free, "지금 낮잠 자면 큰일 나."];
+  return [...TAILS.free, "너무 늦게 자지 마."];
+}
 function vary(m){
   if(TITLES[m.phase]) m.title = pick(TITLES[m.phase]);
-  if(TAILS[m.phase] && Math.random() < .5) m.body += " " + pick(TAILS[m.phase]);
+  if(TAILS[m.phase] && Math.random() < .5) m.body += " " + pick(m.phase === "free" ? freeTails(m) : TAILS[m.phase]);
   return m;
 }
 // 칩으로 묻는 질문들
