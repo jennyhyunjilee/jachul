@@ -986,13 +986,20 @@ const ASK = {
     return {level:"warn", face:1, title:"막차는 대략 이래.", body: route.map(l => `${meta(l.l).name} ${lastText(meta(l.l).last || "24:00")}쯤`).join(", ") + ". 역마다 몇 분씩 달라서 넉넉하게 잡아."};
   },
   // polite: 교수님·상사한테 보낼 존댓말 버전
-  excuse(polite = false){
+  excuse(polite = false, asked = false){
     const p = plan(), sim = currentTrip(p).gone ? currentTrip(p).sim : simulate(leaveNow()), sl = slackOf(sim, p.target);
+    // 직접 써달라고 했으면 안 늦어도 '혹시 늦으면' 버전으로 써줌
+    if(sl >= 0 && asked){
+      const t = hhmm(sim.arrive);
+      return polite
+        ? {level:"", face:0, title:"아직 안 늦어. 그래도 존댓말로 쓰면:", body:`"지금 출발해서 ${t}쯤 도착할 예정입니다. 혹시 늦어지면 바로 연락드리겠습니다."`}
+        : {level:"", face:0, title:"아직 안 늦어. 그래도 반말로 쓰면:", body:`"나 지금 출발! ${t}쯤 도착할 것 같아. 혹시 늦으면 바로 말할게 🙏"`};
+    }
     if(sl >= 0) return {level:"", face:0, title:"아직 안 늦어. 변명 필요 없어.", body:`지금 나가면 ${s.to}에 ${hhmm(sim.arrive)} 도착이야. 그냥 나가.`};
     const t = hhmm(sim.arrive), late = dur(-sl);
     return polite
       ? {level:"late", face:faceLevel(sl), title:"존댓말로 이렇게 보내.", body:`"죄송합니다. 지금 지하철로 이동 중인데 ${t}쯤 도착할 것 같습니다 (${late} 정도 늦습니다). 늦어서 정말 죄송합니다."`}
-      : {level:"late", face:faceLevel(sl), title:"이렇게 보내.", body:`"미안! 나 지하철 타고 가는 중인데 ${t}쯤 도착할 것 같아 (${late} 늦어). 먼저 시작하고 있어 🙏"`};
+      : {level:"late", face:faceLevel(sl), title:"반말로 이렇게 보내.", body:`"미안! 나 지하철 타고 가는 중인데 ${t}쯤 도착할 것 같아 (${late} 늦어). 먼저 시작하고 있어 🙏"`};
   },
 };
 const POLITE = /존댓말|존대|높임|공손|정중|교수|선생|상사|팀장|부장|과장|어른|선배/;
@@ -1086,7 +1093,7 @@ function localAnswer(q){
   if(/귀찮|가기\s*싫|피곤|힘들|졸려|ㅠ/.test(q)) return {...current(), level:"warn", face:2, title:"그래도 가."};
   if(/환승|갈아/.test(q)) return ASK.xfer();
   if(/막차|첫차/.test(q)) return ASK.last();
-  if(/변명|연락|뭐라|늦는다고|보낼\s*말|문자|카톡|메시지|존댓말|존대/.test(q)) return ASK.excuse(POLITE.test(q));
+  if(/변명|연락|뭐라|늦는다고|보낼\s*말|문자|카톡|메시지|존댓말|존대|반말|사과|미안|친구한테|편하게|핑계|늦을\s*것\s*같다고/.test(q)) return ASK.excuse(POLITE.test(q) && !/반말|친구|편하게/.test(q), true);
   if(/언제|몇\s*시|나가야/.test(q)) return ASK.when();
   if(/(\d+)\s*분\s*(뒤|후)/.test(q)) return whatIf(Math.min(180, Number(q.match(/(\d+)\s*분/)[1])));
   if(/지금|어때|늦|지각/.test(q)) return current();
