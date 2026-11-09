@@ -28,7 +28,20 @@ const css = `
 .acct .row2{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
 .acct .msg-line{margin:10px 0 0;font-size:13px;font-weight:700;color:var(--late)}
 .acct .msg-line.ok{color:var(--ok)}
-.acct .msg-line:empty{display:none}`;
+.acct .msg-line:empty{display:none}
+.acct .admin{margin-top:14px;padding-top:12px;border-top:2px dashed var(--line,#999)}
+.acct .admin h3{margin:0 0 6px;font-size:15px}
+.acct .reqs{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.acct .reqs li{display:grid;grid-template-columns:1fr auto auto;gap:6px;align-items:center;font-size:13px}
+.acct .reqs li span{min-width:0;overflow-wrap:anywhere}
+.acct .reqs li small{display:block;color:var(--muted)}
+.acct .reqs button{padding:4px 8px;font-size:12px}
+.acct details{margin-top:10px;font-size:13px}
+.acct .codebox{margin-top:12px;padding:10px;background:var(--ok,#2a9d5c);color:#fff;display:grid;gap:6px}
+.acct .codebox p{margin:0}
+.acct .codebox output{font:700 26px/1.2 monospace;letter-spacing:2px;user-select:all}
+.acct .codebox button{justify-self:start}
+.acct .codebox small{font-size:12px}`;
 
 const dlg = document.getElementById('routesDialog');
 const box = document.createElement('div');
@@ -48,8 +61,16 @@ box.innerHTML = `
       <label for="acFirstPw">새 비밀번호 (8자 넘게)</label><input id="acFirstPw" type="password" autocomplete="new-password" minlength="8" maxlength="72" required>
       <label for="acFirstPw2">한 번 더</label><input id="acFirstPw2" type="password" autocomplete="new-password" minlength="8" maxlength="72" required>
       <button class="save" type="submit">비밀번호 정하고 로그인</button></form>
-    <p class="hint">비밀번호 잊었으면 관리자한테 새 가입 코드 받아서 여기서 다시 정하면 돼.</p>
+    <button type="button" class="linkish" data-go="ask">가입 코드 없어? / 비밀번호 잊었어? 코드 달라고 하기</button>
     <button type="button" class="linkish" data-go="login">← 로그인으로</button>
+  </div>
+  <div data-pane="ask" hidden>
+    <p class="hint">관리자한테 가입 코드 달라고 남겨. 코드 받으면 "여기서 비밀번호 정하기"에서 쓰면 돼.</p>
+    <form data-form="ask"><label for="akEmail">이메일</label><input id="akEmail" type="email" autocomplete="email" maxlength="120" required>
+      <label for="akName">이름</label><input id="akName" autocomplete="name" maxlength="30" required>
+      <label for="akNote">한마디 (선택: 어느 수업인지, 비밀번호 잊었는지 등)</label><input id="akNote" maxlength="200">
+      <button class="save" type="submit">코드 달라고 하기</button></form>
+    <button type="button" class="linkish" data-go="first">← 코드 받았으면 비밀번호 정하기</button>
   </div>
   <div data-pane="setpw" hidden>
     <p class="hint">새 비밀번호 정해. 8자 넘게.</p>
@@ -60,6 +81,16 @@ box.innerHTML = `
   <div data-pane="me" hidden>
     <p class="who"><b data-name></b> 로그인됨<small data-sync></small></p>
     <div class="row2"><button type="button" data-go="setpw">비밀번호 바꾸기</button><button type="button" data-logout>로그아웃</button></div>
+    <div class="admin" data-admin hidden>
+      <h3>관리자 · 가입 코드 요청 <span data-reqn></span></h3>
+      <ul class="reqs" data-reqs></ul>
+      <details><summary>요청 없이 직접 코드 만들기</summary>
+        <form data-form="issue"><label for="adEmail">이메일</label><input id="adEmail" type="email" maxlength="120" required>
+          <label for="adName">이름 (명부에 없는 새 사람이면 꼭)</label><input id="adName" maxlength="30">
+          <button class="save" type="submit">코드 만들기</button></form></details>
+      <div class="codebox" data-codebox hidden><p><b data-codewho></b> 가입 코드</p><output data-code></output>
+        <button type="button" data-copy>복사</button><small>이 창 닫으면 다시 못 봐. 그 사람한테만 따로 보내. 예전 코드는 이제 안 돼.</small></div>
+    </div>
   </div>
   <p class="msg-line" role="alert" data-msg></p>`;
 if(dlg && sb){
@@ -125,15 +156,22 @@ async function signedIn(u){
     await sb.auth.signOut(); user = null; render(); open('login'); msg('명부에 없는 계정이야. 등록된 이메일로 해.');
     return;
   }
-  memberName = data.name; render(); pull();
+  memberName = data.name; render(); pull(); loadReqs();
 }
 
 // ---- 이벤트 ----
 const busy = (form, on) => form.querySelectorAll('button').forEach(b => b.disabled = on);
 box.addEventListener('click', async e => {
   const t = e.target.closest('button'); if(!t) return;
-  if(t.dataset.go){ show(t.dataset.go); if(t.dataset.go === 'first' && q('#acEmail').value) q('#acFirst').value ||= q('#acEmail').value; return; }
+  if(t.dataset.go){ show(t.dataset.go); if(t.dataset.go === 'first' && q('#acEmail').value) q('#acFirst').value ||= q('#acEmail').value;
+    if(t.dataset.go === 'ask') q('#akEmail').value ||= q('#acFirst').value || q('#acEmail').value; return; }
   if(t.hasAttribute('data-logout')){ await sb.auth.signOut(); }
+  if(t.dataset.issue){ const r = reqs.find(x => String(x.id) === t.dataset.issue); if(r) issue(r.email, r.name, t.closest('li')); }
+  if(t.dataset.dismiss){ await admin({action: 'dismiss', id: Number(t.dataset.dismiss)}); loadReqs(); }
+  if(t.hasAttribute('data-copy')){
+    const c = q('[data-code]').textContent;
+    try{ await navigator.clipboard.writeText(c); t.textContent = '복사됨'; }catch{ getSelection().selectAllChildren(q('[data-code]')); }
+  }
 });
 box.addEventListener('submit', async e => {
   e.preventDefault();
@@ -159,6 +197,15 @@ box.addEventListener('submit', async e => {
     busy(f, false);
     if(r.error) return msg(errText(r.error));
     msg('비밀번호 정했어. 이제 내 경로 저장하면 어디서든 같이 보여.', true);
+  } else if(kind === 'ask'){
+    busy(f, true);
+    const {data, error} = await sb.rpc('jachul_request_code', {p_email: q('#akEmail').value, p_name: q('#akName').value, p_note: q('#akNote').value});
+    busy(f, false);
+    if(error || data !== 'ok') return msg(data === 'email' ? '이메일 다시 봐.' : data === 'name' ? '이름 써줘 (30자까지).' : data === 'full' ? '요청이 너무 많이 밀려 있어. 좀 있다 해.' : errText(error));
+    q('#akNote').value = '';
+    msg('요청 남겼어. 관리자가 코드 주면 "여기서 비밀번호 정하기"에서 써.', true);
+  } else if(kind === 'issue'){
+    issue(q('#adEmail').value, q('#adName').value, f);
   } else if(kind === 'setpw'){
     const pw = q('#acNew').value;
     if(pw.length < 8) return msg('비밀번호는 8자 넘게.');
@@ -172,12 +219,49 @@ box.addEventListener('submit', async e => {
   }
 });
 
+// ---- 관리자: 가입 코드 요청함 (Edge Function jachul-admin, 관리자 아니면 서버가 거절) ----
+let reqs = [];
+async function admin(body){
+  const {data, error} = await sb.functions.invoke('jachul-admin', {body});
+  return error ? null : data;
+}
+async function loadReqs(){
+  const d = await admin({action: 'list'});
+  q('[data-admin]').hidden = !d;
+  if(!d) return;
+  reqs = d.requests || [];
+  q('[data-reqn]').textContent = reqs.length ? `${reqs.length}건` : '없음';
+  const ul = q('[data-reqs]'); ul.textContent = '';
+  for(const r of reqs){   // 남이 쓴 글이라 textContent로만 넣음
+    const li = document.createElement('li'), sp = document.createElement('span'), sm = document.createElement('small');
+    sp.textContent = `${r.name} · ${r.email}${r.member ? '' : ' (새 사람)'}`;
+    sm.textContent = r.note || ''; sp.append(sm);
+    const b1 = document.createElement('button'); b1.type = 'button'; b1.dataset.issue = r.id; b1.textContent = '코드 만들기';
+    const b2 = document.createElement('button'); b2.type = 'button'; b2.dataset.dismiss = r.id; b2.textContent = '지우기';
+    li.append(sp, b1, b2); ul.append(li);
+  }
+}
+async function issue(email, name, el){
+  el?.querySelectorAll?.('button').forEach(b => b.disabled = true);
+  const d = await admin({action: 'issue', email, name});
+  el?.querySelectorAll?.('button').forEach(b => b.disabled = false);
+  if(!d?.code) return msg('코드 못 만들었어. 새 사람이면 이름도 넣어.');
+  q('[data-codewho]').textContent = `${name || ''} ${email}`.trim();
+  q('[data-code]').textContent = d.code;
+  q('[data-copy]').textContent = '복사';
+  q('[data-codebox]').hidden = false;
+  q('#adEmail').value = q('#adName').value = '';
+  loadReqs();
+}
+// 창 닫으면 코드 지움 (다시 못 봄)
+dlg?.addEventListener('close', () => { if(q('[data-code]')){ q('[data-code]').textContent = ''; q('[data-codebox]').hidden = true; } });
+
 if(dlg && sb){
   sb.auth.onAuthStateChange((event, session) => {
     if(event === 'PASSWORD_RECOVERY') setTimeout(() => open('setpw'), 300);   // 메일 링크로 돌아오면 바로 비밀번호 정하기
     const u = session?.user || null;
     if(u && u.id !== user?.id) setTimeout(() => signedIn(u), 0);
-    if(!u && user){ user = null; memberName = ''; lastPushed = ''; render(); }
+    if(!u && user){ user = null; memberName = ''; lastPushed = ''; reqs = []; q('[data-admin]').hidden = true; render(); }
   });
   render();
 }

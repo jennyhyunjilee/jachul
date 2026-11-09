@@ -403,6 +403,8 @@ dialog[open]{animation:rise .25s steps(3,end)}
 #routesList .del{flex:none;width:34px;height:34px;padding:0;font-size:14px}
 .rrow{display:flex;gap:6px;align-items:center}
 .rrow > button:first-child{flex:1;min-width:0}
+/* 저장한 경로 줄: 배경이 투명하면 버튼 그림자가 글자 밑에 깔려 겹쳐 보임 → 배경 채움 */
+.rrow > button{background-color:var(--card);background-clip:padding-box}
 
 /* 컴퓨터: 슬라이드 안만 2단, 바깥은 그대로 */
 @media (min-width:860px){
