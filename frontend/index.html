@@ -2194,7 +2194,7 @@ const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
 function markSlide(){
   document.querySelectorAll("#tabs [data-go]").forEach(b => b.setAttribute("aria-current", Number(b.dataset.go) === cur));
   slides.forEach((sl, k) => sl.classList.toggle("active", k === cur));
-  if(cur === 1 && ready() && !s.dialHelpSeen) dialHelp(true);   // 원 처음 보면 설명부터
+  // 원 설명은 ? 눌렀을 때만 (저절로 안 뜸)
   $("app").classList.toggle("on-goal", cur === 0);
 }
 function go(i, smooth = true){

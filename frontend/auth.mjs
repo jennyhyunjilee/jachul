@@ -9,7 +9,7 @@ const sb = window.supabase && cfg.supabaseUrl
 let user = null, memberName = '', routes = null, lastPushed = '', pushTimer = null, mode = 'login';
 
 const ERR = {
-  'Invalid login credentials': '이메일이나 비밀번호가 틀렸어. 처음이면 "비밀번호 만들기"부터 해.',
+  'Invalid login credentials': '이메일이나 비밀번호가 틀렸어. 처음이면 아래 "여기서 비밀번호 정하기"부터 해.',
   'Email not confirmed': '아직 이메일 확인이 안 됐어. 메일함 봐.',
   'New password should be different from the old password.': '전이랑 다른 비밀번호로 해.',
 };
@@ -39,12 +39,16 @@ box.innerHTML = `
     <form data-form="login"><label for="acEmail">이메일</label><input id="acEmail" type="email" autocomplete="username" required>
       <label for="acPw">비밀번호</label><input id="acPw" type="password" autocomplete="current-password" required>
       <button class="save" type="submit">로그인</button></form>
-    <button type="button" class="linkish" data-go="first">처음 왔어? 비밀번호 만들기</button>
+    <button type="button" class="linkish" data-go="first">처음 왔어? / 비밀번호 잊었어? 여기서 비밀번호 정하기</button>
   </div>
   <div data-pane="first" hidden>
-    <p class="hint">명부에 있는 이메일을 넣으면 비밀번호 만드는 링크를 메일로 보내줄게. 비밀번호 잊었을 때도 이거.</p>
-    <form data-form="first"><label for="acFirst">이메일</label><input id="acFirst" type="email" autocomplete="email" required>
-      <button class="save" type="submit">비밀번호 설정 메일 받기</button></form>
+    <p class="hint">처음이면 여기서 바로 비밀번호 정해. 명부에 있는 이메일이랑 따로 받은 <b>가입 코드</b>(1번만 씀)가 필요해.</p>
+    <form data-form="first"><label for="acFirst">이메일</label><input id="acFirst" type="email" autocomplete="username" required>
+      <label for="acCode">가입 코드</label><input id="acCode" autocomplete="one-time-code" autocapitalize="characters" spellcheck="false" placeholder="ABCD-1234" maxlength="12" required>
+      <label for="acFirstPw">새 비밀번호 (8자 넘게)</label><input id="acFirstPw" type="password" autocomplete="new-password" minlength="8" maxlength="72" required>
+      <label for="acFirstPw2">한 번 더</label><input id="acFirstPw2" type="password" autocomplete="new-password" minlength="8" maxlength="72" required>
+      <button class="save" type="submit">비밀번호 정하고 로그인</button></form>
+    <p class="hint">비밀번호 잊었으면 관리자한테 새 가입 코드 받아서 여기서 다시 정하면 돼.</p>
     <button type="button" class="linkish" data-go="login">← 로그인으로</button>
   </div>
   <div data-pane="setpw" hidden>
@@ -142,11 +146,19 @@ box.addEventListener('submit', async e => {
     q('#acPw').value = '';
   } else if(kind === 'first'){
     busy(f, true);
-    const email = q('#acFirst').value.trim();
-    const {error} = await sb.auth.resetPasswordForEmail(email, {redirectTo: location.origin + location.pathname});
+    const email = q('#acFirst').value.trim(), pw = q('#acFirstPw').value;
+    if(pw !== q('#acFirstPw2').value){ busy(f, false); return msg('두 번 쓴 비밀번호가 달라.'); }
+    // 비밀번호는 Supabase(HTTPS)로만 감. DB 함수가 이메일+가입 코드 확인하고 bcrypt로만 저장. 코드는 1회용, 5번 틀리면 잠김
+    const {data, error} = await sb.rpc('jachul_set_password', {p_email: email, p_code: q('#acCode').value, p_password: pw});
+    if(error || data !== 'ok'){
+      busy(f, false);
+      return msg(data === 'weak' ? '비밀번호가 너무 짧아. 8자 넘게.' : '이메일이나 가입 코드가 안 맞아. (이미 쓴 코드거나, 5번 틀려서 잠겼으면 관리자한테 새 코드 받아)');
+    }
+    q('#acCode').value = q('#acFirstPw').value = q('#acFirstPw2').value = '';
+    const r = await sb.auth.signInWithPassword({email, password: pw});
     busy(f, false);
-    if(error) return msg(errText(error));
-    msg(`${email}로 메일 보냈어. 메일 속 링크 누르면 여기로 돌아와서 비밀번호 정하면 돼. (명부에 있는 이메일만 가)`, true);
+    if(r.error) return msg(errText(r.error));
+    msg('비밀번호 정했어. 이제 내 경로 저장하면 어디서든 같이 보여.', true);
   } else if(kind === 'setpw'){
     const pw = q('#acNew').value;
     if(pw.length < 8) return msg('비밀번호는 8자 넘게.');
