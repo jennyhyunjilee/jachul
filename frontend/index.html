@@ -114,10 +114,11 @@ body:not(.ready) #moreLate{display:none}
 .dialbtns{display:flex;gap:6px}
 #dialHelpBtn{min-width:34px}
 #dialCard{position:relative}
-.dialhelp{position:absolute;z-index:3;left:12px;right:12px;top:52px;background:var(--card,#fff);color:var(--ink);border:3px solid #111;box-shadow:4px 4px 0 #111;padding:14px 16px;font-size:14px;line-height:1.55;text-align:left}
-.tinted .dialhelp{background:#fffdf3;color:#111}
+.dialhelp .sheet{font-size:15px;line-height:1.6}
+.dialhelp .hlead{margin:6px 0 0}
+#dialHelpOk{width:100%}
 .dialhelp .hcols{display:grid;gap:2px;margin-top:2px}
-.dialhelp ol{margin:8px 0 10px;padding-left:20px;display:grid;gap:6px}
+.dialhelp ol{margin:10px 0 16px;padding-left:20px;display:grid;gap:6px}
 .dialhelp i{display:inline-block;width:11px;height:11px;border:1.5px solid #111;margin:0 4px 0 2px;vertical-align:-1px}
 .dialhelp i.dot{border-radius:50%;background:var(--accent);width:13px;height:13px}
 .dial .knoblab{font-size:8.5px;font-weight:700;fill:#111;pointer-events:none}
@@ -494,15 +495,6 @@ dialog[open]{animation:rise .25s steps(3,end)}
       <div class="two">
         <section class="card dialwrap preview" id="dialCard">
           <div class="dialhead"><h2>지금 상황</h2><span class="dialbtns"><button type="button" class="mini" id="dialHelpBtn" aria-expanded="false" aria-controls="dialHelp">?</button><button type="button" class="mini" id="moreLate" aria-pressed="false">더 늦을지도;</button></span></div>
-          <div class="dialhelp" id="dialHelp" hidden>
-            <b>이 원은 시계야. 앞으로 <span id="dialHelpMin">60</span>분.</b>
-            <ol>
-              <li>맨 위가 <b>지금</b>. 시계 방향으로 시간이 흘러.</li>
-              <li>색깔 뜻<span class="hcols"><span><i style="background:#fff"></i>여유: 놀아도 돼</span><span><i style="background:var(--prep)"></i>준비: 씻고 입어</span><span><i style="background:var(--travel)"></i>이동: 지하철 타고 가</span></span></li>
-              <li><i class="dot"></i><b>나감</b> 동그라미를 돌려봐. 그때 나가면 늦는지 가운데에 나와.</li>
-            </ol>
-            <button type="button" class="mini" id="dialHelpOk">알겠어</button>
-          </div>
           <p class="ghost">목표부터 정하고 '세팅' 눌러. 그럼 여기서 시간이 흘러가.</p>
           <p class="moodline" id="moodLine"></p>
           <svg class="dial" id="dial" viewBox="0 0 300 300" role="img" aria-label="출발 시각 다이얼. 가운데 누르면 쟈철이 말해줌"></svg>
@@ -606,6 +598,18 @@ dialog[open]{animation:rise .25s steps(3,end)}
 </dialog>
 
 <!-- 역 고르기 -->
+<dialog id="dialHelp" class="dialhelp" aria-labelledby="dialHelpTitle">
+  <div class="sheet">
+    <div class="khead"><h2 id="dialHelpTitle">이 원은 시계야</h2><button type="button" class="kclose" id="dialHelpX" aria-label="닫기">✕</button></div>
+    <p class="hlead">앞으로 <b id="dialHelpMin">60</b>분을 한 바퀴로 보여줘.</p>
+    <ol>
+      <li>맨 위가 <b>지금</b>. 시계 방향으로 시간이 흘러.</li>
+      <li>색깔 뜻<span class="hcols"><span><i style="background:#fff"></i>여유: 놀아도 돼</span><span><i style="background:var(--prep)"></i>준비: 씻고 입어</span><span><i style="background:var(--travel)"></i>이동: 지하철 타고 가</span></span></li>
+      <li><i class="dot"></i><b>나감</b> 동그라미를 돌려봐. 그때 나가면 늦는지 가운데에 나와.</li>
+    </ol>
+    <button type="button" class="save" id="dialHelpOk">알겠어</button>
+  </div>
+</dialog>
 <dialog id="picker">
   <div class="sheet">
     <div class="khead"><h2 id="pickerTitle">역 고르기</h2><button type="button" class="kclose" id="pickerX" aria-label="닫기">✕</button></div>
@@ -1476,11 +1480,15 @@ $("dial").addEventListener("pointerup", ()=>dragging=false);
 $("offset").addEventListener("input", e=>{ unlockAudio(); selOffset = Number(e.target.value); if(selOffset !== lastSel){ sfx("click"); lastSel = selOffset; } drawDial(plan()); });
 // 원 설명 열고 닫기. 처음 한 번은 자동으로 보여줌
 function dialHelp(show){
-  $("dialHelp").hidden = !show; $("dialHelpBtn").setAttribute("aria-expanded", show);
+  const d = $("dialHelp");
+  if(show && !d.open) d.showModal(); else if(!show && d.open) d.close();
+  $("dialHelpBtn").setAttribute("aria-expanded", show);
   $("dialHelpMin").textContent = $("offset").max;
   if(!show && !s.dialHelpSeen){ s.dialHelpSeen = true; store.set(s); }
 }
-$("dialHelpBtn").addEventListener("click", () => dialHelp($("dialHelp").hidden));
+$("dialHelpBtn").addEventListener("click", () => dialHelp(true));
+$("dialHelpX").addEventListener("click", () => dialHelp(false));
+$("dialHelp").addEventListener("close", () => { if(!s.dialHelpSeen){ s.dialHelpSeen = true; store.set(s); } $("dialHelpBtn").setAttribute("aria-expanded", false); });
 $("dialHelpOk").addEventListener("click", () => dialHelp(false));
 $("moreLate").addEventListener("click", e=>{
   dialExt = !dialExt;
