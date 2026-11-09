@@ -1004,14 +1004,31 @@ Object.assign(ASK, {
       : {level:"late", face:4, title:"택시 타는 게 나을 수도.", body:`지하철이면 ${dur(-sl)} 지각이야. 길 막히는지 지도 앱으로 확인해.`};
   },
   help(){
-    return {level:"", face:1, title:"이런 거 물어봐.", body:"언제 나가? · 샤워해도 돼? · 커피 사도 돼? · 10분 뒤에 나가면? · 얼마나 걸려? · 몇 정거장? · 다음 열차 · 덜 걷는 길 · 뛰어야 돼? · 택시 탈까? · 막차 · 늦는다고 뭐라 해?"};
+    return {level:"", face:1, title:"이런 거 물어봐.", body:"언제 나가? · 샤워해도 돼? · 커피 사도 돼? · 10분 뒤에 나가면? · 얼마나 걸려? · 몇 정거장? · 다음 열차 · 덜 걷는 길 · 걷는 시간 포함돼? · 뛰어야 돼? · 택시 탈까? · 막차 · 늦는다고 뭐라 해?"};
   },
 });
+// "길 걷는 시간까지 고려해줘", "집에서 역까지 12분 걸려", "도보 시간 포함돼?"
+const WALK_Q = /걷는\s*(시간|거)|걸어\s*가는|걸어서|도보|역까지|까지\s*걸어|내려서|환승\s*(할\s*때\s*)?걷|길\s*걷/;
+ASK.walk = q => {
+  const nm = q.match(/(\d+)\s*분/), n = nm ? Math.min(60, Number(nm[1])) : null;
+  if(n !== null && !/환승/.test(q)){
+    const fromSide = /내려서|도착역|목적지|역에서|에서\s*(학교|회사|약속)/.test(q) && !/집에서/.test(q);
+    const k = fromSide ? "walkFrom" : "walkTo";
+    s[k] = n; goalChanged(true, false);
+    const p = plan();
+    return {level:"", face:0, title:`${fromSide ? "도착역 → 목적지" : "집 → 출발역"} ${n}분으로 바꿨어.`, body:`이거까지 넣으면 ${when(p.leave)}에 나가야 ${s.arrive}까지 ${s.to} 맞아.`};
+  }
+  const xw = route ? route.slice(1).reduce((a, l) => a + xferWalk(l.from), 0) : 0;
+  const total = s.walkTo + xw + s.walkFrom;
+  return {level:"", face:1, title:`걷는 시간 이미 넣었어. 총 ${total}분.`,
+    body:`집 → ${route ? route[0].from : "출발역"} ${s.walkTo}분${xw ? ` + 환승 걷기 ${xw}분` : ""} + ${s.to || "도착역"}역 내려서 목적지까지 ${s.walkFrom}분. 기다리는 시간도 들어가 있어. 다르면 "집에서 역까지 12분"처럼 말해줘. 바로 바꿔줄게.`};
+};
 function localAnswer(q){
   if(!ready()) return current();
   if(/^(안녕|하이|ㅎㅇ|헬로|hi|hello)/i.test(q.trim())) return {...current(), title:"안녕. 근데 시간 없어."};
   if(/고마|땡큐|ㄱㅅ|thank/i.test(q)) return {level:"", face:0, title:"고맙긴. 늦지만 마.", body:current().title};
   if(/뭐\s*물어|뭘\s*물어|도움|기능|할\s*수\s*있/.test(q)) return ASK.help();
+  if(WALK_Q.test(q) && !/덜\s*걷|최소|적게\s*걷|다른\s*길/.test(q)) return ASK.walk(q);
   if(/덜\s*걷|걷기|걸음|최소|다른\s*길|경로|길\s*(바꿔|알려|추천)/.test(q)) return ASK.routes();
   const task = canIDo(q); if(task) return task;
   if(/정거장|역\s*몇/.test(q)) return ASK.stops();
