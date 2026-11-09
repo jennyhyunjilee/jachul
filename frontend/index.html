@@ -120,6 +120,10 @@ svg.dial{width:100%;max-width:280px;overflow:visible;touch-action:none;cursor:gr
 input[type=range]{width:100%;accent-color:var(--travel)}
 input[type=range]{width:100%;accent-color:var(--travel)}
 .legend{display:flex;gap:14px;font-size:12px;color:var(--muted);margin-top:6px}
+.offhint{display:block;text-align:center;font-size:12px;color:var(--muted);margin-top:4px}
+.legend{flex-wrap:wrap;justify-content:center;row-gap:2px}
+.legend b{color:var(--ink);font-weight:700}
+.dial .ringlab{font-size:11px;font-weight:700;fill:#fff;stroke:#111;stroke-width:3px;paint-order:stroke;pointer-events:none}
 .legend i{display:inline-block;width:12px;height:12px;border-radius:4px;margin-right:5px;vertical-align:-2px;border:1.5px solid var(--line)}
 
 /* 경로 */
@@ -394,15 +398,16 @@ dialog[open]{animation:rise .25s steps(3,end)}
 @media (max-height:640px){ .tagline{display:none} }
 @media (max-width:859px){
   /* 폰: 원·버튼·상태 카드가 스크롤 없이 한 화면에 */
-  #offset,#liveClock,#sDial .dialhead h2,#dialCard .moodline{display:none}
+  #liveClock,#dialCard .offhint,#sDial .dialhead h2,#dialCard .moodline{display:none}
   #dialCard{position:relative;padding-top:10px !important;padding-bottom:10px !important}
   #sDial .dialhead{position:absolute;top:8px;right:8px;z-index:1}
   #sDial .two{flex:1 1 auto}
   #dialCard{flex:1 1 auto;justify-content:center}
-  svg.dial{flex:1 1 0;width:100%;max-width:none;min-height:min(200px,24vh);max-height:min(330px,44vh);margin-top:0}
-  #moodCard{padding-block:10px !important}
+  svg.dial{flex:1 1 0;width:100%;max-width:none;min-height:min(180px,20vh);max-height:min(330px,44vh);margin-top:0}
+  #moodCard{padding-block:10px !important;flex-shrink:0}
   .moodbody{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
   #dialCard .legend{margin-top:2px}
+  #offset{margin:4px 0 0}
   #moodTitle{font-size:17px;margin:0}
   .moodbody{font-size:14px;margin:4px 0 0}
   #sDial .two{gap:10px}
@@ -470,8 +475,9 @@ dialog[open]{animation:rise .25s steps(3,end)}
           <p class="ghost">목표부터 정하고 '세팅' 눌러. 그럼 여기서 시간이 흘러가.</p>
           <p class="moodline" id="moodLine"></p>
           <svg class="dial" id="dial" viewBox="0 0 300 300" role="img" aria-label="출발 시각 다이얼. 가운데 누르면 쟈철이 말해줌"></svg>
+          <label class="offhint" for="offset">↔ 끌어서 언제 나갈지 바꿔봐</label>
           <input type="range" id="offset" min="0" max="60" value="0" aria-label="몇 분 뒤 출발할지">
-          <div class="legend">
+          <div class="legend" id="dialLegend">
             <span><i style="background:var(--ringFree)"></i>여유</span>
             <span><i style="background:var(--prep)"></i>준비</span>
             <span><i style="background:var(--travel)"></i>이동</span>
@@ -949,10 +955,17 @@ const POLITE = /존댓말|존대|높임|공손|정중|교수|선생|상사|팀�
 const TASKS = [[/샤워|씻/, "씻기", 15], [/머리\s*감/, "머리 감기", 10], [/화장|메이크업/, "화장", 20], [/머리\s*(말리|드라이)|드라이/, "머리 말리기", 10],
   [/밥|아침|점심|저녁|먹/, "밥 먹기", 15], [/커피|카페/, "커피 사기", 10], [/편의점|다이소|마트/, "들렀다 가기", 8], [/화장실|똥|쉬/, "화장실", 5],
   [/옷\s*갈아|옷\s*입|옷/, "옷 입기", 7], [/낮잠|잠깐\s*자|자도/, "잠깐 자기", 20], [/게임|유튜브|폰|인스타|릴스/, "폰 보기", 15], [/설거지|청소|빨래/, "집안일", 15]];
+const NOT_DO = /안\s?[가-힣]|않|말고|말게|말자|그만|참을|참고|참았|패스|생략|스킵|건너뛸|없이|끊을|끊었/;
 function canIDo(q){
   const t = TASKS.find(([re]) => re.test(q)); if(!t) return null;
   const nm = q.match(/(\d+)\s*분/), need = nm ? Number(nm[1]) : t[2];
   const p = plan(), n = now(), spare = mins(p.leave - n) - (n < p.prepStart ? s.prep : 0);
+  // "폰 안 본다니까", "샤워 안 할게", "커피 말고" → 안 하겠다는 말. 하면 늦는다고 혼내지 말고 받아줌
+  if(NOT_DO.test(q.replace(/안녕|안전|안경|안에|안쪽|안내/g, ""))){
+    const sl = slackOf(simulate(Math.max(n, p.leave)), p.target);
+    return sl >= 0 ? {level:"", face:0, title:`좋아, ${t[1]} 참는 거 잘했어.`, body:`그럼 ${when(p.leave)}에 나가면 ${s.to}에 ${dur(sl)} 여유 있게 도착해.${spare > 0 ? ` 남는 ${dur(spare)}은 그냥 쉬어.` : ""}`}
+      : {level:"late", face:faceLevel(sl), title:`${t[1]} 안 해도 이미 빠듯해.`, body:`지금 바로 나가도 ${dur(-sl)} 늦어. 신발 신어.`};
+  }
   if(spare >= need) return {level:"", face:0, title:`${t[1]} 해도 돼.`, body:`${need}분 잡아도 ${dur(spare - need)} 남아. 그래도 ${when(p.leave)}엔 나가.`};
   const r = simulate(Math.max(n, p.leave) + (need - Math.max(0, spare))*MIN), sl = slackOf(r, p.target);
   return sl >= 0 ? {level:"warn", face:1, title:`${t[1]}? 빠듯해.`, body:`${need}분 하면 여유가 ${dur(sl)}밖에 안 남아. 빨리 끝내.`}
@@ -1334,7 +1347,7 @@ function drawDial(p){
   const res = r.cut && sl < 0 ? `막차 끊김 · 첫차 ${hhmm(r.cut.board)}`
     : sl >= 0 ? `목표까지 ${dur(sl)} 여유` : `목표보다 ${dur(-sl)} 지각`;
   const [kx,ky] = polar(selOffset / W * 360);
-  const ticks = [0,.25,.5,.75].map(f=>{
+  const ticks = [0].map(f=>{
     // 좌우 눈금은 원 바깥쪽으로 붙여서 링이랑 안 겹치게
     const side = f === .25 ? "start" : f === .75 ? "end" : "middle";
     const [x,y] = polar(f*360, side === "middle" ? R+24 : R+15);
@@ -1354,6 +1367,18 @@ function drawDial(p){
   const trail = [-30, -20, -10].map((d, i) => { const [x, y] = polar(d, R - 19); return `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${2 + i}" fill="var(--sweep)" opacity="${.25 + i*.2}"/>`; }).join("");
   const [hx, hy] = polar(0, R - 19);
   face += `<g class="sweep" style="animation-delay:-${secF.toFixed(2)}s;transform:rotate(${(secF*6).toFixed(1)}deg)">${trail}<circle cx="${hx}" cy="${hy}" r="6.5" fill="var(--sweep)" stroke="#111" stroke-width="2"/></g>`;
+  // 링 위에 '여유/준비/이동' 글씨 (칸이 충분히 길 때만, 손잡이랑 안 겹치게)
+  const kdeg = selOffset / W * 360;
+  const ringLab = (d0, d1, txt) => {
+    d0 = Math.max(0, d0); d1 = Math.min(360, d1);
+    if(d1 - d0 < 34) return "";
+    const m = [(d0 + d1)/2, kdeg + 24, kdeg - 24].find(c => c >= d0 + 10 && c <= d1 - 10 && Math.abs(c - kdeg) >= 20);
+    if(m === undefined) return "";
+    const [x, y] = polar(m);
+    return `<text x="${x.toFixed(1)}" y="${(y+4).toFixed(1)}" text-anchor="middle" class="ringlab">${txt}</text>`;
+  };
+  // 아래 설명: 각 색이 몇 시부터 몇 시인지
+  $("dialLegend").innerHTML = `<span><i style="background:var(--prep)"></i>준비 <b>${p.prepStart > t ? hhmm(p.prepStart) + "부터" : "지금"}</b></span><span><i style="background:var(--travel)"></i>출발 <b>${hhmm(p.leave)}</b></span>`;
   const clockTxt = [T.getHours(), T.getMinutes(), sec].map(n => String(n).padStart(2, "0")).join(":");
   $("dial").innerHTML = `
     <circle cx="${CX}" cy="${CY}" r="${R}" fill="none" stroke="var(--soft)" stroke-width="18"/>
@@ -1363,12 +1388,13 @@ function drawDial(p){
     <path d="${arc(deg(p.prepStart), deg(p.leave))}" stroke="var(--prep)" stroke-width="18" fill="none"/>
     <path d="${arc(deg(p.leave), deg(p.target))}" stroke="var(--travel)" stroke-width="18" fill="none"/>
     ${ticks}
+    ${ringLab(0, deg(p.prepStart), "여유")}${ringLab(deg(p.prepStart), deg(p.leave), "준비")}${ringLab(deg(p.leave), deg(p.target), "이동")}
     <circle cx="${kx}" cy="${ky}" r="14" fill="var(--accent)" stroke="var(--ink)" stroke-width="3"/>
     ${selOffset < 60
       ? `<text x="${CX}" y="${CY-14}" text-anchor="middle" class="center-big">${selOffset===0 ? "지금 나가면" : selOffset+"분 뒤에 나가면"}</text>`
-      : `<text x="${CX}" y="${CY-40}" text-anchor="middle" class="center-big">${dur(selOffset)} 뒤에</text><text x="${CX}" y="${CY-18}" text-anchor="middle" class="center-big">나가면</text>`}
-    <text x="${CX}" y="${CY+9}" text-anchor="middle" class="center-sm">${hhmm(r.legs[0].board)} 열차 · ${hhmm(r.arrive)} 도착</text>
-    <text x="${CX}" y="${CY+33}" text-anchor="middle" class="center-res" fill="${color}">${res}</text>`;
+      : `<text x="${CX}" y="${CY-23}" text-anchor="middle" class="center-big">${dur(selOffset)} 뒤에</text><text x="${CX}" y="${CY-2}" text-anchor="middle" class="center-big">나가면</text>`}
+    <text x="${CX}" y="${CY+(selOffset < 60 ? 9 : 17)}" text-anchor="middle" class="center-sm">${hhmm(r.legs[0].board)} 열차 · ${hhmm(r.arrive)} 도착</text>
+    <text x="${CX}" y="${CY+(selOffset < 60 ? 33 : 38)}" text-anchor="middle" class="center-res" fill="${color}">${res}</text>`;
 }
 function setOffsetFromPointer(e){
   const box = $("dial").getBoundingClientRect();
@@ -1891,18 +1917,35 @@ $("askForm").addEventListener("submit", e => {
   reply(q, () => STATUS.claude ? askClaude(q).catch(() => localAnswer(q))
     : sampleCap ? askSample(q).catch(() => localAnswer(q)) : localAnswer(q));
 });
-$("bellBtn").addEventListener("click", async () => {
+// 알림 ON/OFF: 켜져 있을 때 다시 누르면 끔
+const notifyOn = () => "Notification" in window && Notification.permission === "granted" && !s.notifyOff;
+function renderBell(){
+  const on = notifyOn();
+  $("bellBtn").innerHTML = on ? '🔔 알림 <b>ON</b>' : '🔕 알림 <b>OFF</b>';
+  $("bellBtn").setAttribute("aria-pressed", on);
+  $("bellBtn").title = on ? "누르면 알림 끔" : "누르면 알림 켬";
+  if($("notifyBtn")){ $("notifyBtn").textContent = on ? "알림 ON (누르면 끔)" : "알림 OFF (누르면 켬)"; $("notifyBtn").setAttribute("aria-pressed", on); }
+}
+async function toggleNotify(quiet){
   unlockAudio();
-  if(!("Notification" in window)) return say({level:"warn", face:1, title:"이 브라우저는 알림이 안 돼.", body:"대신 화면 켜두면 소리로 보챌게."});
+  if(notifyOn()){
+    s.notifyOff = true; store.set(s); renderBell();
+    if(!quiet) say({level:"", face:0, title:"알림 껐어.", body:"다시 누르면 켜져."});
+    return;
+  }
+  if(!("Notification" in window)){ renderBell(); return say({level:"warn", face:1, title:"이 브라우저는 알림이 안 돼.", body:"대신 화면 켜두면 소리로 보챌게."}); }
   let r = "denied";
   try{ r = await Notification.requestPermission(); }catch{}
-  $("bellBtn").textContent = r === "granted" ? "🔔 알림 켜짐" : "🔕 알림 꺼짐";
-  say(r === "granted" ? {level:"", face:0, title:"알림 켰어.", body:`늦을 것 같으면 ${s.interval}분마다 울릴게.`} : {level:"warn", face:1, title:"알림이 막혀 있어.", body:"브라우저 설정에서 알림을 허용해줘."});
-});
+  if(r === "granted"){ s.notifyOff = false; store.set(s); }
+  renderBell();
+  if(!quiet) say(r === "granted" ? {level:"", face:0, title:"알림 켰어.", body:`늦을 것 같으면 ${s.interval}분마다 울릴게. 다시 누르면 꺼져.`} : {level:"warn", face:1, title:"알림이 막혀 있어.", body:"브라우저 설정에서 알림을 허용해줘."});
+}
+$("bellBtn").addEventListener("click", () => toggleNotify(false));
+renderBell();
 
 // ---- 에이전트가 먼저 말 건다 ----
 function notify(m){
-  if(!("Notification" in window) || Notification.permission!=="granted") return;
+  if(!notifyOn()) return;
   try{ new Notification(m.title, {body:m.body, tag:"jansori"}); }catch{}
 }
 // 8비트 삑삑 (브라우저는 사용자가 한 번 눌러야 소리가 남)
@@ -2003,11 +2046,7 @@ $("homeBtn").addEventListener("click", ()=>{
     s.home = {lat:pos.coords.latitude, lng:pos.coords.longitude}; store.set(s); watchHome();
   }, noGps);
 });
-$("notifyBtn").addEventListener("click", async ()=>{
-  let r = "denied";
-  try{ if("Notification" in window) r = await Notification.requestPermission(); }catch{}
-  $("notifyBtn").textContent = r==="granted" ? "알림 켜짐" : "알림 꺼짐";
-});
+$("notifyBtn").addEventListener("click", () => toggleNotify(true));
 
 // ---- 설정 ----
 const form = $("form"), SET_KEYS = ["walkTo","walkFrom","buffer","interval","delay"];
