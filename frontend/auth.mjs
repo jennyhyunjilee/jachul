@@ -64,6 +64,9 @@ if(dlg && sb){
   head ? head.after(box) : dlg.querySelector('.sheet').prepend(box);
 }
 const q = sel => box.querySelector(sel);
+// 위쪽 '로그인' 버튼: 내 경로 창 안에 숨어 있던 로그인 칸을 바로 열어줌
+const loginBtn = document.getElementById('loginBtn');
+if(loginBtn && dlg && sb){ loginBtn.hidden = false; loginBtn.addEventListener('click', () => open(user ? 'me' : 'login')); }
 
 function show(pane){
   mode = pane;
@@ -78,6 +81,8 @@ function render(){
   if(!user && (mode === 'me' || mode === 'setpw')) show('login');
   const b = document.getElementById('openRoutes');
   if(b) b.title = user ? `${memberName} · 내 경로` : '내 경로 · 로그인';
+  const lb = document.getElementById('loginBtn');
+  if(lb){ lb.textContent = user ? (memberName ? `${memberName}님` : '내 계정') : '로그인'; lb.title = user ? '로그인됨 · 눌러서 내 계정 보기' : '로그인하면 내 경로가 폰·컴퓨터에 같이 저장돼'; }
 }
 
 // ---- 내 경로 동기화 ----
