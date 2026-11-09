@@ -115,6 +115,9 @@ button.mini{font-size:12px;padding:3px 8px}
 button.mini[aria-pressed="true"]{background:var(--accent);color:var(--accentInk)}
 svg.dial{width:100%;max-width:280px;overflow:visible;touch-action:none;cursor:grab;user-select:none;margin-top:6px}
 .center-big{font-size:19px;font-weight:700;fill:var(--ink)}
+.center-when{font-size:13px;fill:var(--muted)}
+.center-out{font-size:21px;font-weight:700}
+.dialwrap .center-out{fill:var(--ink)}
 .center-sm{font-size:12px;fill:var(--muted)}
 .center-res{font-size:14px;font-weight:700}
 input[type=range]{width:100%;accent-color:var(--travel)}
@@ -1361,6 +1364,8 @@ function drawDial(p){
   $("offset").max = W;
   const r = simulate(leaveNow() + selOffset*MIN), sl = slackOf(r, p.target);
   const color = sl >= 5 ? "var(--ok)" : sl >= 0 ? "var(--prep)" : "var(--late)";
+  // 원 안은 짧게: 결과 한 마디만
+  const resShort = r.cut && sl < 0 ? "막차 끊김" : sl >= 0 ? `${dur(sl)} 여유` : `${dur(-sl)} 지각`;
   const res = r.cut && sl < 0 ? `막차 끊김 · 첫차 ${hhmm(r.cut.board)}`
     : sl >= 0 ? `목표까지 ${dur(sl)} 여유` : `목표보다 ${dur(-sl)} 지각`;
   const [kx,ky] = polar(selOffset / W * 360);
@@ -1400,18 +1405,15 @@ function drawDial(p){
   $("dial").innerHTML = `
     <circle cx="${CX}" cy="${CY}" r="${R}" fill="none" stroke="var(--soft)" stroke-width="18"/>
     ${face}
-    <text x="${CX}" y="${CY-47}" text-anchor="middle" class="now-clock">${clockTxt}</text>
+    <text x="${CX}" y="${CY-26}" text-anchor="middle" class="now-clock">${clockTxt}</text>
     <path d="${arc(0, deg(p.prepStart))}" stroke="var(--ringFree)" stroke-width="18" fill="none"/>
     <path d="${arc(deg(p.prepStart), deg(p.leave))}" stroke="var(--prep)" stroke-width="18" fill="none"/>
     <path d="${arc(deg(p.leave), deg(p.target))}" stroke="var(--travel)" stroke-width="18" fill="none"/>
     ${ticks}
     ${ringLab(0, deg(p.prepStart), "여유")}${ringLab(deg(p.prepStart), deg(p.leave), "준비")}${ringLab(deg(p.leave), deg(p.target), "이동")}
     <circle cx="${kx}" cy="${ky}" r="14" fill="var(--accent)" stroke="var(--ink)" stroke-width="3"/>
-    ${selOffset < 60
-      ? `<text x="${CX}" y="${CY-14}" text-anchor="middle" class="center-big">${selOffset===0 ? "지금 나가면" : selOffset+"분 뒤에 나가면"}</text>`
-      : `<text x="${CX}" y="${CY-23}" text-anchor="middle" class="center-big">${dur(selOffset)} 뒤에</text><text x="${CX}" y="${CY-2}" text-anchor="middle" class="center-big">나가면</text>`}
-    <text x="${CX}" y="${CY+(selOffset < 60 ? 9 : 17)}" text-anchor="middle" class="center-sm">${hhmm(r.legs[0].board)} 열차 · ${hhmm(r.arrive)} 도착</text>
-    <text x="${CX}" y="${CY+(selOffset < 60 ? 33 : 38)}" text-anchor="middle" class="center-res" fill="${color}">${res}</text>`;
+    <text x="${CX}" y="${CY+3}" text-anchor="middle" class="center-when">${selOffset === 0 ? "지금 나가면" : dur(selOffset) + " 뒤에 나가면"}</text>
+    <text x="${CX}" y="${CY+31}" text-anchor="middle" class="center-out" fill="${color}">${resShort}</text>`;
 }
 function setOffsetFromPointer(e){
   const box = $("dial").getBoundingClientRect();
