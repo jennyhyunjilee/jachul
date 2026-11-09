@@ -738,7 +738,8 @@ const mins = ms => Math.round(ms / MIN);
 // 01:33에 05:32는 같은 날이라 "아침 05:32"
 function when(ms){
   if(dayOf(ms - 4*60*MIN) <= dayOf(now() - 4*60*MIN)) return hhmm(ms);
-  return (dayOf(ms) === dayOf(now()) ? "아침 " : "내일 ") + hhmm(ms);
+  const h = new Date(ms).getHours(), part = h < 12 ? "아침" : h < 18 ? "오후" : "저녁";
+  return (dayOf(ms) === dayOf(now()) ? part + " " : "내일 " + part + " ") + hhmm(ms);
 }
 const dur = m => m >= 60 ? `${Math.floor(m/60)}시간${m%60 ? " "+m%60+"분" : ""}` : `${m}분`;
 const ready = () => !!(route && s.arrive);
@@ -912,10 +913,10 @@ function judge(p, t){
   // 목표보다 한참 일찍 도착하는 계획이면 막차 때문
   const early = slackOf(p.sim, p.target) > 45 && simulate(p.leave + 15*MIN).cut ? " 막차 때문에 일찍 나가야 돼." : "";
   if(t > p.target) return {phase:"over", level:"late", title:"약속 시간 지났어.", body:"내일 목표 다시 정해."};
-  if(!p.infeasible && toPrep > 10) return {phase:"free", level:"", title:"아직 안 나가도 돼.", body:`${s.arrive}까지 ${s.to} 가려면 준비는 ${dur(toPrep)} 뒤, 집에서 나가는 건 ${dur(toDep)} 뒤야.${early}${lastTxt}`};
-  if(!p.infeasible && toPrep > 0) return {phase:"soon", level:"warn", title:"하던 거 슬슬 정리해.", body:`${toPrep}분 뒤에 준비 시작해야 ${s.arrive}까지 ${s.to} 도착해.${early}${lastTxt}`};
+  if(!p.infeasible && toPrep > 10) return {phase:"free", level:"", title:"아직 안 나가도 돼.", body:`${s.arrive}까지 ${s.to} 가려면 준비는 ${dur(toPrep)} 뒤인 ${when(p.prepStart)}부터, 집에서 나가는 건 ${dur(toDep)} 뒤인 ${when(p.leave)}야. ${first.from}에서 ${hhmm(first.board)} 열차 타면 돼.${early}${lastTxt}`};
+  if(!p.infeasible && toPrep > 0) return {phase:"soon", level:"warn", title:"하던 거 슬슬 정리해.", body:`${toPrep}분 뒤(${hhmm(p.prepStart)})에 준비 시작해야 ${s.arrive}까지 ${s.to} 도착해.${early}${lastTxt}`};
   if(!p.infeasible && toDep > 5) return {phase:"prep", level:lastTxt ? "urgent" : "warn", title:"지금 준비 시작해.", body:`지금 하면 안 뛰어도 돼. ${first.from} ${hhmm(first.board)} 열차${src} 타야 돼.${xf}${early}${lastTxt}`};
-  if(!p.infeasible && toDep > 0) return {phase:"shoes", level:"urgent", title:"신발 신어.", body:`${toDep}분 안에 안 나가면 ${first.from} ${hhmm(first.board)} 열차${src} 놓쳐.${lastTxt}`};
+  if(!p.infeasible && toDep > 0) return {phase:"shoes", level:"urgent", title:"신발 신어.", body:`${toDep}분 안에(${hhmm(p.leave)}까지) 안 나가면 ${first.from} ${hhmm(first.board)} 열차${src} 놓쳐.${lastTxt}`};
   const r = simulate(leaveNow()), sl = slackOf(r, p.target);
   if(r.cut && sl < 0) return {phase:"cut", level:"late", title:"막차 끊겼어.",
     body:`지금 나가도 ${r.cut.from} ${meta(r.cut.l).name}은 첫차 ${when(r.cut.board)}까지 없어. 지하철로는 ${s.to}에 ${when(r.arrive)} 도착이야. 택시 타.`};
