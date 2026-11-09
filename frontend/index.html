@@ -809,7 +809,9 @@ function nextServiceStart(l, t){
 }
 function scheduleNext(leg, t){
   const m = meta(leg.l), h = m.h*MIN;
-  const first = dayOf(t) + (hash(leg.ids[0]+leg.next) % m.h)*MIN + (isLive() ? 0 : s.delay*MIN);
+  // 기준을 자정으로 잡으면 24시간이 배차(예: 7분)로 안 나눠떨어져서 00:00에 열차 박자가 확 바뀜
+  // (23:59에 나가면 00:05 열차, 00:00에 나가면 00:03 열차 같은 거꾸로 된 계산) → 운행 안 하는 새벽 4시를 기준으로
+  const first = dayOf(t - 4*60*MIN) + (hash(leg.ids[0]+leg.next) % m.h)*MIN + (isLive() ? 0 : s.delay*MIN);
   return first + Math.ceil((t - first)/h)*h;
 }
 function modelNext(leg, t){
