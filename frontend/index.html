@@ -322,8 +322,9 @@ svg.dial{max-width:min(300px,100%)}
 .tinted button{background:#ffffff;color:#111111}
 .dialwrap .center-res{fill:var(--ink)}
 .dial .now-clock{font-size:21px;font-weight:700;fill:var(--ink);font-family:"GalmuriMono11","Galmuri11",monospace;letter-spacing:.02em}
-.dial .tickhead{transform-box:fill-box;transform-origin:center;animation:tickpop .35s steps(2,end)}
-@keyframes tickpop{from{transform:scale(1.9)}to{transform:scale(1)}}
+.dialwrap{--sweep:#ffe14a}
+.dial .sweep{transform-box:view-box;transform-origin:150px 150px;animation:sweep 60s linear infinite}
+@keyframes sweep{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
 /* 지금 상황: 버튼 셋을 원 바로 밑에 한 줄로 */
 .side{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
 .side > .qbtn{order:1;padding:10px 4px;font-size:13px;line-height:1.25}
@@ -361,7 +362,7 @@ dialog[open]{animation:rise .25s steps(3,end)}
 .arow2{display:flex;gap:8px;flex-wrap:wrap}
 .arow2 .save{flex:1;margin-top:6px}
 .arow2 #copyExcuse,.arow2 #copyExcusePolite{flex:1 1 40%;margin-top:6px}
-@media (prefers-reduced-motion: reduce){ .dial .tickhead{animation:none} }
+@media (prefers-reduced-motion: reduce){ .dial .sweep{animation:none} }
 @media (prefers-reduced-motion: reduce){ .mic.rec,.m-late .moodline,.m-doomed .moodline,.slide.active .two > *,.slide.active > .set,dialog[open]{animation:none} }
 
 .toast{position:fixed;left:50%;bottom:max(16px, env(safe-area-inset-bottom, 0px));transform:translateX(-50%);z-index:20;width:min(420px,calc(100% - 32px));background:var(--card);color:var(--ink);padding:10px 14px;font-size:14px;border-style:solid;border-width:6px;border-image:var(--pxb) 2 / 6px / 0 stretch;background-clip:padding-box;filter:drop-shadow(4px 4px 0 var(--shadow))}
@@ -1342,17 +1343,17 @@ function drawDial(p){
     if(m >= 60 && m % 60) return `<text x="${x}" y="${y-3}" text-anchor="${side}" class="center-sm"><tspan x="${x}">+${Math.floor(m/60)}시간</tspan><tspan x="${x}" dy="13">${m%60}분</tspan></text>`;
     return `<text x="${x}" y="${y+4}" text-anchor="${side}" class="center-sm">${f ? "+"+dur(m) : "지금"}</text>`;
   }).join("");
-  // 째깍: 안쪽 눈금 60개를 초침이 한 칸씩 돌고, 지나간 칸은 꼬리처럼 흐려짐
-  const T = new Date(t), sec = T.getSeconds();
+  // 안쪽 눈금 60개 + 노란 초침이 스르륵 한 바퀴 (1분). 1초마다 다시 그려도 지금 초에 맞춰 이어서 돌게 animation-delay를 음수로
+  const T = new Date(t), sec = T.getSeconds(), secF = sec + T.getMilliseconds()/1000;
   let face = "";
   for(let i = 0; i < 60; i++){
-    const big = i % 5 === 0, age = (sec - i + 60) % 60;
-    const op = age === 0 ? 1 : age < 10 ? .9 - age*.06 : big ? .55 : .3;
+    const big = i % 5 === 0;
     const [x0, y0] = polar(i*6, R - 14), [x1, y1] = polar(i*6, R - (big ? 23 : 19));
-    face += `<line x1="${x0.toFixed(1)}" y1="${y0.toFixed(1)}" x2="${x1.toFixed(1)}" y2="${y1.toFixed(1)}" stroke="var(--ink)" stroke-opacity="${op.toFixed(2)}" stroke-width="${age === 0 ? 3.2 : big ? 2.2 : 1.4}"/>`;
+    face += `<line x1="${x0.toFixed(1)}" y1="${y0.toFixed(1)}" x2="${x1.toFixed(1)}" y2="${y1.toFixed(1)}" stroke="var(--ink)" stroke-opacity="${big ? .55 : .3}" stroke-width="${big ? 2.2 : 1.4}"/>`;
   }
-  const [hx, hy] = polar(sec*6, R - 19);
-  face += `<rect class="tickhead" x="${(hx-4).toFixed(1)}" y="${(hy-4).toFixed(1)}" width="8" height="8" fill="var(--ink)"/>`;
+  const trail = [-30, -20, -10].map((d, i) => { const [x, y] = polar(d, R - 19); return `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${2 + i}" fill="var(--sweep)" opacity="${.25 + i*.2}"/>`; }).join("");
+  const [hx, hy] = polar(0, R - 19);
+  face += `<g class="sweep" style="animation-delay:-${secF.toFixed(2)}s;transform:rotate(${(secF*6).toFixed(1)}deg)">${trail}<circle cx="${hx}" cy="${hy}" r="6.5" fill="var(--sweep)" stroke="#111" stroke-width="2"/></g>`;
   const clockTxt = [T.getHours(), T.getMinutes(), sec].map(n => String(n).padStart(2, "0")).join(":");
   $("dial").innerHTML = `
     <circle cx="${CX}" cy="${CY}" r="${R}" fill="none" stroke="var(--soft)" stroke-width="18"/>
