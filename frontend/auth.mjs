@@ -66,7 +66,7 @@ if(dlg && sb){
 const q = sel => box.querySelector(sel);
 // 위쪽 '로그인' 버튼: 내 경로 창 안에 숨어 있던 로그인 칸을 바로 열어줌
 const loginBtn = document.getElementById('loginBtn');
-if(loginBtn && dlg && sb){ loginBtn.hidden = false; loginBtn.addEventListener('click', () => open(user ? 'me' : 'login')); }
+if(loginBtn && dlg && sb){ loginBtn.dataset.auth = '1'; loginBtn.addEventListener('click', () => open(user ? 'me' : 'login')); }
 
 function show(pane){
   mode = pane;
