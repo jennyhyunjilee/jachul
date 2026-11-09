@@ -358,6 +358,12 @@ svg.dial{max-width:min(300px,100%)}
 .qbtn .lg{display:none}
 
 /* 맨 밑 열차 바 */
+.dmodes{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;width:100%;margin-top:8px}
+.dmodes button{padding:5px 4px;font-size:12.5px;line-height:1.25;background:var(--card);color:var(--ink);box-shadow:2px 2px 0 var(--shadow)}
+.dmodes button small{display:block;font-size:10.5px;font-weight:400;opacity:.75}
+.dmodes button.on{background:var(--accent);color:var(--accentInk)}
+.tinted .dmodes button{background:#fffdf3;color:#111}
+.tinted .dmodes button.on{background:var(--accent);color:var(--accentInk)}
 .rmodes{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin:8px 0 6px}
 .rmodes button{display:flex;flex-direction:column;align-items:center;gap:2px;padding:7px 4px;font-size:13px;background:var(--card);color:var(--ink);text-align:center}
 .rmodes button small{font-size:10.5px;font-weight:400;color:var(--muted);line-height:1.3}
@@ -425,11 +431,14 @@ dialog[open]{animation:rise .25s steps(3,end)}
   #sDial .dialhead{position:absolute;top:8px;right:8px;z-index:1}
   #sDial .two{flex:1 1 auto}
   #dialCard{flex:1 1 auto;justify-content:center}
-  svg.dial{flex:1 1 0;width:100%;max-width:none;min-height:min(180px,20vh);max-height:min(330px,44vh);margin-top:0}
+  svg.dial{flex:1 1 0;width:100%;max-width:none;min-height:min(150px,17vh);max-height:min(330px,44vh);margin-top:0}
   #moodCard{padding-block:10px !important;flex-shrink:0}
   .moodbody{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
   #dialCard .legend{margin-top:2px}
   #offset{margin:4px 0 0}
+  .dmodes{margin-top:4px}
+  .dmodes button{padding:4px 2px;font-size:12px}
+  .dmodes button small{display:none}
   #moodTitle{font-size:17px;margin:0}
   .moodbody{font-size:14px;margin:4px 0 0}
   #sDial .two{gap:10px}
@@ -500,6 +509,7 @@ dialog[open]{animation:rise .25s steps(3,end)}
           <svg class="dial" id="dial" viewBox="0 0 300 300" role="img" aria-label="출발 시각 다이얼. 가운데 누르면 쟈철이 말해줌"></svg>
           <label class="offhint" for="offset">↔ 끌어서 언제 나갈지 바꿔봐</label>
           <input type="range" id="offset" min="0" max="60" value="0" aria-label="몇 분 뒤 출발할지">
+          <div class="dmodes" id="dialModes" role="radiogroup" aria-label="원은 어떤 길 기준?"></div>
           <div class="legend" id="dialLegend">
             <span><i style="background:var(--ringFree)"></i>여유</span>
             <span><i style="background:var(--prep)"></i>준비</span>
@@ -1195,6 +1205,9 @@ const sameRoute = (a, b) => !!a && !!b && a.map(l => l.l + l.from + l.to).join()
 function renderRouteModes(){
   const el = $("routeModes"); if(!el) return;
   const cur = s.routeMode in ROUTE_MODES ? s.routeMode : "time";
+  // 원 밑에도 같은 선택: 원이 어떤 길로 계산한 건지 보이게
+  $("dialModes").innerHTML = Object.entries(ROUTE_MODES).map(([m, name]) => ROUTES[m]
+    ? `<button type="button" role="radio" data-mode="${m}" aria-checked="${m === cur}" class="${m === cur ? "on" : ""}">${name}<small>${routeMinutes(ROUTES[m])}분 · 환승 ${ROUTES[m].length - 1}</small></button>` : "").join("");
   el.innerHTML = Object.entries(ROUTE_MODES).map(([m, name]) => {
     const r = ROUTES[m]; if(!r) return "";
     const same = Object.keys(ROUTE_MODES).find(o => o !== m && o < m && sameRoute(ROUTES[o], r));
@@ -1202,6 +1215,10 @@ function renderRouteModes(){
       + `<small>${routeMinutes(r)}분 · 환승 ${r.length - 1}<br>걷기 ${routeWalk(r)}분${same ? `<br>(${ROUTE_MODES[same]}이랑 같은 길)` : ""}</small></button>`;
   }).join("");
 }
+$("dialModes").addEventListener("click", e => {
+  const b = e.target.closest("[data-mode]"); if(!b || b.dataset.mode === s.routeMode) return;
+  s.routeMode = b.dataset.mode; sfx("click"); goalChanged(true, false);
+});
 $("routeModes").addEventListener("click", e => {
   const b = e.target.closest("[data-mode]"); if(!b || b.dataset.mode === s.routeMode) return;
   s.routeMode = b.dataset.mode; goalChanged(true, false);   // 길만 바꾸는 건 세팅 다시 안 해도 됨
