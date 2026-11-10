@@ -1542,9 +1542,9 @@ function arc(d0, d1){
 }
 let lastKind = null, lastSel = 0, windTurns = 0, prevDeg = null, windWarnText = "";
 const WIND_MAX = 8;   // 태엽 최대 8바퀴
-// 감아서 늦어질 때 경고 (충청도 말투). 분 단위로 고정해서 1초마다 글씨가 바뀌진 않게
-const WIND_LATE = ["워메, 지각이여!", "이러다 늦어유~ 얼른 가유", "큰일 났슈, 지각이유!", "뛰어도 늦어유, 서둘러유!"];
-const WIND_DOOM = ["걍 가지 말어유~ 집에서 자유", "포기혀유. 이불 덮고 누워유", "오늘은 글렀슈~ 내일 일찍 나와유", "가봤자 소용읎어유. 푹 자유"];
+// 감아서 늦어질 때 경고 (반말 + 충청도 맛만 살짝: "~유"는 안 씀). 분 단위로 고정해서 1초마다 글씨가 바뀌진 않게
+const WIND_LATE = ["워메, 지각이다!", "이러다 늦어~ 얼른 가", "큰일 났다, 지각이야!", "뛰어도 늦어, 서둘러!"];
+const WIND_DOOM = ["걍 가지 마~ 집에서 자", "포기혀. 이불 덮고 누워", "오늘은 글렀어~ 내일 일찍 나와", "가봤자 소용읎어. 푹 자"];
 // 원 카드 색: 감았으면 감은 시간 기준으로 (안 감았으면 지금 기준, renderMood가 칠함)
 function tintDialFor(sl, cut){
   const el = $("dialCard"), k = cut && sl < 0 || sl <= -30 ? "doomed" : sl < 0 ? "late" : sl < 5 ? "go" : "free";
