@@ -63,7 +63,14 @@ def gemini_reply(question, context):
         with urllib.request.urlopen(req, timeout=20) as r:
             data = json.loads(r.read().decode())
     except urllib.error.HTTPError as e:
-        return {'ok': False, 'error': 'Gemini 호출이 너무 많아. 잠깐 뒤에 다시.' if e.code == 429 else f'Gemini 오류 {e.code}'}
+        try:   # 왜 거절됐는지(키 값은 안 들어 있음) 서버 로그에 남김
+            err = json.loads(e.read().decode()).get('error', {})
+            print(f"[gemini] {e.code} {err.get('status', '')}: {str(err.get('message', ''))[:200]}", flush=True)
+        except Exception:
+            err = {}
+        if e.code == 429:
+            return {'ok': False, 'error': 'Gemini 호출이 너무 많아. 잠깐 뒤에 다시.'}
+        return {'ok': False, 'error': f"Gemini 오류 {e.code} {err.get('status', '')}".strip()}
     except (urllib.error.URLError, TimeoutError):
         return {'ok': False, 'error': 'Gemini 연결 실패'}
     parts = ((data.get('candidates') or [{}])[0].get('content') or {}).get('parts') or []
