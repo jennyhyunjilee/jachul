@@ -7,7 +7,7 @@ import os
 import urllib.error
 import urllib.request
 
-GROQ_MODEL = os.environ.get('GROQ_MODEL', 'llama-3.3-70b-versatile')
+GROQ_MODEL = os.environ.get('GROQ_MODEL', 'openai/gpt-oss-120b')   # 2026-11 Groq 무료로 되는 모델 (llama-3.3은 기업 전용이 됨)
 
 CLAUDE_MODEL = os.environ.get('CLAUDE_MODEL', 'claude-opus-5-5')
 CHAT_SYSTEM = """너는 '쟈철'이라는 지하철 지각 방지 앱의 에이전트야. 사용자가 늦지 않게 보채는 게 일이야.
@@ -55,8 +55,10 @@ def groq_reply(question, context):
             {'role': 'system', 'content': CHAT_SYSTEM + '\n- 반드시 한국어로만 대답해.'},
             {'role': 'user', 'content': f'[상황]\n{json.dumps(context, ensure_ascii=False)}\n\n[질문]\n{question}'},
         ],
-        'max_tokens': 400,
+        'max_tokens': 1500,          # 생각(추론) 몫 포함
         'temperature': 0.7,
+        'reasoning_effort': 'low',   # 짧은 채팅이라 빨리
+        'include_reasoning': False,  # 생각 과정은 안 받음
     }
     req = urllib.request.Request(
         'https://api.groq.com/openai/v1/chat/completions', data=json.dumps(body).encode(), method='POST',
