@@ -364,6 +364,13 @@ svg.dial{max-width:min(300px,100%)}
 .dialwrap .center-res{fill:var(--ink)}
 .dial .now-clock{font-size:21px;font-weight:700;fill:var(--ink);font-family:"GalmuriMono11","Galmuri11",monospace;letter-spacing:.02em}
 .dialwrap{--sweep:#ffe14a}
+/* 태엽: 감을수록 늦게 나감 → 감긴 바퀴(안쪽 빨간 고리) + 경고 글씨 깜빡 */
+.dial .coil{fill:none;stroke:#ff5a4f;stroke-width:3;stroke-dasharray:6 4;opacity:.85}
+.m-doomed .dial .coil{stroke:#ff3b30}
+.dial .windwarn{font-size:13px;font-weight:700;fill:#fff;animation:blink .8s steps(1,end) infinite}
+.dial .windturn{font-size:11px;fill:var(--muted)}
+.windreset{background:#fff;color:#111}
+@media (prefers-reduced-motion: reduce){ .dial .windwarn{animation:none} }
 .dial .sweep{transform-box:view-box;transform-origin:150px 150px;animation:sweep 60s linear infinite}
 @keyframes sweep{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
 /* 지금 상황: 버튼 셋을 원 바로 밑에 한 줄로 */
@@ -524,7 +531,7 @@ dialog[open]{animation:rise .25s steps(3,end)}
     <section class="slide" id="sDial" aria-label="지금 상황">
       <div class="two">
         <section class="card dialwrap preview" id="dialCard">
-          <div class="dialhead"><h2>지금 상황</h2><span class="dialbtns"><button type="button" class="mini" id="dialHelpBtn" aria-expanded="false" aria-controls="dialHelp">?</button><button type="button" class="mini" id="moreLate" aria-pressed="false">더 늦을지도;</button></span></div>
+          <div class="dialhead"><h2>지금 상황</h2><span class="dialbtns"><button type="button" class="mini" id="dialHelpBtn" aria-expanded="false" aria-controls="dialHelp">?</button><button type="button" class="mini" id="moreLate" aria-pressed="false">더 늦을지도;</button><button type="button" class="mini windreset" id="windReset" hidden>↺ 원래대로</button></span></div>
           <p class="ghost">목표부터 정하고 '세팅' 눌러. 그럼 여기서 시간이 흘러가.</p>
           <p class="moodline" id="moodLine"></p>
           <svg class="dial" id="dial" viewBox="0 0 300 300" role="img" aria-label="출발 시각 다이얼. 가운데 누르면 쟈철이 말해줌"></svg>
@@ -637,6 +644,7 @@ dialog[open]{animation:rise .25s steps(3,end)}
       <li>맨 위가 <b>지금</b>. 시계 방향으로 시간이 흘러.</li>
       <li>색깔 뜻<span class="hcols"><span><i style="background:#fff"></i>여유: 놀아도 돼</span><span><i style="background:var(--prep)"></i>준비: 씻고 입어</span><span><i style="background:var(--travel)"></i>이동: 지하철 타고 가</span></span></li>
       <li><i class="dot"></i><b>나감</b> 동그라미를 돌려봐. 그때 나가면 늦는지 가운데에 나와.</li>
+      <li>한 바퀴 넘게 계속 돌리면 <b>태엽처럼 감겨서</b> 더 늦게 나가는 걸로 쳐. 늦을수록 빨개지고, 왕창 늦으면 까매져. <b>↺ 원래대로</b> 누르면 지금으로 돌아와.</li>
     </ol>
     <button type="button" class="save" id="dialHelpOk">알겠어</button>
   </div>
@@ -1508,7 +1516,18 @@ function arc(d0, d1){
   const [x0,y0]=polar(d0),[x1,y1]=polar(d1);
   return `M${x0} ${y0} A${R} ${R} 0 ${d1-d0>180?1:0} 1 ${x1} ${y1}`;
 }
-let lastKind = null, lastSel = 0;
+let lastKind = null, lastSel = 0, windTurns = 0, prevDeg = null;
+const WIND_MAX = 8;   // 태엽 최대 8바퀴
+// 감아서 늦어질 때 경고 (충청도 말투). 분 단위로 고정해서 1초마다 글씨가 바뀌진 않게
+const WIND_LATE = ["워메, 지각이여!", "이러다 늦어유~ 얼른 가유", "큰일 났슈, 지각이유!", "뛰어도 늦어유, 서둘러유!"];
+const WIND_DOOM = ["걍 가지 말어유~ 집에서 자유", "포기혀유. 이불 덮고 누워유", "오늘은 글렀슈~ 내일 일찍 나와유", "가봤자 소용읎어유. 푹 자유"];
+// 원 카드 색: 감았으면 감은 시간 기준으로 (안 감았으면 지금 기준, renderMood가 칠함)
+function tintDialFor(sl, cut){
+  const el = $("dialCard"), k = cut && sl < 0 || sl <= -30 ? "doomed" : sl < 0 ? "late" : sl < 5 ? "go" : "free";
+  el.classList.remove("m-free","m-soon","m-prep","m-go","m-late","m-doomed"); el.classList.add("m-" + k, "tinted");
+  // 늦으면 쨍한 빨강(조금씩 진해짐), 30분 넘게 늦거나 막차 끊기면 검정
+  el.style.setProperty("--card", k === "late" ? `hsl(2 86% ${Math.round(50 - Math.min(14, -sl/2))}%)` : moodColor({k, sl}));
+}
 function drawDial(p){
   const t = now();
   const W = Math.max(15, Math.min(dialExt ? 180 : 60, Math.ceil((p.target - t)/MIN)));   // 기본 60분까지, '더 늦을지도;' 켜면 3시간
@@ -1527,7 +1546,14 @@ function drawDial(p){
   const resShort = r.cut && sl < 0 ? "막차 끊김" : sl >= 0 ? `${dur(sl)} 여유` : `${dur(-sl)} 지각`;
   const res = r.cut && sl < 0 ? `막차 끊김 · 첫차 ${hhmm(r.cut.board)}`
     : sl >= 0 ? `목표까지 ${dur(sl)} 여유` : `목표보다 ${dur(-sl)} 지각`;
-  const [kx,ky] = polar(selOffset / W * 360);
+  if(selOffset > 0) tintDialFor(sl, r.cut);
+  $("windReset").hidden = selOffset === 0;
+  const turns = Math.floor(selOffset / W), kfrac = selOffset / W - turns;
+  const [kx,ky] = polar(kfrac * 360);
+  let coils = "";
+  for(let i = 1; i <= Math.min(turns, 6); i++) coils += `<circle class="coil" cx="${CX}" cy="${CY}" r="${R - 30 - i*6}"/>`;
+  const lateMin = -sl, doom = (r.cut && sl < 0) || sl <= -30;
+  const warn = selOffset > 0 && sl < 0 ? (doom ? WIND_DOOM : WIND_LATE)[Math.floor(lateMin / 7) % 4] : "";
   const ticks = [0].map(f=>{
     // 좌우 눈금은 원 바깥쪽으로 붙여서 링이랑 안 겹치게
     const side = f === .25 ? "start" : f === .75 ? "end" : "middle";
@@ -1549,7 +1575,7 @@ function drawDial(p){
   const [hx, hy] = polar(0, R - 19);
   face += `<g class="sweep" style="animation-delay:-${secF.toFixed(2)}s;transform:rotate(${(secF*6).toFixed(1)}deg)">${trail}<circle cx="${hx}" cy="${hy}" r="6.5" fill="var(--sweep)" stroke="#111" stroke-width="2"/></g>`;
   // 링 위에 '여유/준비/이동' 글씨 (칸이 충분히 길 때만, 손잡이랑 안 겹치게)
-  const kdeg = selOffset / W * 360;
+  const kdeg = kfrac * 360;
   const ringLab = (d0, d1, txt) => {
     d0 = Math.max(0, d0); d1 = Math.min(360, d1);
     if(d1 - d0 < 34) return "";
@@ -1574,13 +1600,22 @@ function drawDial(p){
     <circle cx="${kx}" cy="${ky}" r="14" fill="var(--accent)" stroke="var(--ink)" stroke-width="3"/>
     <text x="${kx}" y="${ky+4}" text-anchor="middle" class="knoblab">나감</text>
     <text x="${CX}" y="${CY+3}" text-anchor="middle" class="center-when">${selOffset === 0 ? "지금 나가면" : dur(selOffset) + " 뒤에 나가면"}</text>
-    <text x="${CX}" y="${CY+31}" text-anchor="middle" class="center-out" fill="${color}">${resShort}</text>`;
+    <text x="${CX}" y="${CY+31}" text-anchor="middle" class="center-out" fill="${color}">${resShort}</text>
+    ${coils}
+    ${turns ? `<text x="${CX}" y="${CY-50}" text-anchor="middle" class="windturn">태엽 ${turns}바퀴 감김</text>` : ""}
+    ${warn ? `<text x="${CX}" y="${CY+56}" text-anchor="middle" class="windwarn">${warn}</text>` : ""}`;
 }
 function setOffsetFromPointer(e){
   const box = $("dial").getBoundingClientRect();
   const x = (e.clientX - box.left)/box.width*300 - CX, y = (e.clientY - box.top)/box.height*300 - CY;
   let deg = Math.atan2(y, x)*180/Math.PI + 90; if(deg<0) deg+=360;
-  selOffset = Math.round(deg/360*Number($("offset").max)); $("offset").value = selOffset;
+  const W = Number($("offset").max);
+  if(prevDeg !== null){
+    if(prevDeg > 270 && deg < 90) windTurns = Math.min(WIND_MAX - 1, windTurns + 1);        // 12시를 시계 방향으로 넘음 → 한 바퀴 더 감김
+    else if(prevDeg < 90 && deg > 270){ if(windTurns > 0) windTurns--; else deg = 0; }       // 거꾸로 넘음 → 풀림 (0 밑으론 안 감)
+  }
+  prevDeg = deg;
+  selOffset = Math.round((windTurns + deg/360) * W); $("offset").value = Math.min(selOffset, W);
   if(selOffset !== lastSel){ sfx("click"); lastSel = selOffset; }
   drawDial(plan());
 }
@@ -1590,12 +1625,15 @@ $("dial").addEventListener("pointerdown", e=>{
   const box = $("dial").getBoundingClientRect();
   const x = (e.clientX - box.left)/box.width*300 - CX, y = (e.clientY - box.top)/box.height*300 - CY;
   if(Math.hypot(x, y) < 72){ centerTap = true; return; }   // 가운데 누르면 쟈철이 말해줌
-  unlockAudio(); dragging=true; $("dial").setPointerCapture(e.pointerId); setOffsetFromPointer(e);
+  unlockAudio(); dragging=true; $("dial").setPointerCapture(e.pointerId);
+  windTurns = Math.floor(selOffset / Number($("offset").max)); prevDeg = null;
+  setOffsetFromPointer(e);
 });
 $("dial").addEventListener("click", ()=>{ if(centerTap && ready()) openAlarm(); centerTap = false; });
 $("dial").addEventListener("pointermove", e=>{ if(dragging) setOffsetFromPointer(e); });
 $("dial").addEventListener("pointerup", ()=>dragging=false);
-$("offset").addEventListener("input", e=>{ unlockAudio(); selOffset = Number(e.target.value); if(selOffset !== lastSel){ sfx("click"); lastSel = selOffset; } drawDial(plan()); });
+$("windReset").addEventListener("click", () => { selOffset = 0; windTurns = 0; prevDeg = null; lastSel = 0; $("offset").value = 0; sfx("ding"); drawDial(plan()); renderMood(plan()); });
+$("offset").addEventListener("input", e=>{ unlockAudio(); windTurns = 0; selOffset = Number(e.target.value); if(selOffset !== lastSel){ sfx("click"); lastSel = selOffset; } drawDial(plan()); });
 // 원 설명 열고 닫기. 처음 한 번은 자동으로 보여줌
 function dialHelp(show){
   const d = $("dialHelp");
@@ -2204,6 +2242,7 @@ function renderMood(p){
   const md = moodOf(p), M = MOODS[md.k], col = moodColor(md);
   for(const id of ["dialCard", "moodCard"]){
     const el = $(id);
+    if(id === "dialCard" && selOffset > 0) continue;   // 태엽 감은 동안은 감은 시간 기준 색 (drawDial)
     if(!el.classList.contains("tinted")){ el.style.transition = "none"; requestAnimationFrame(() => requestAnimationFrame(() => { el.style.transition = ""; })); }   // 처음엔 바로, 그 뒤로는 천천히 색이 변함
     el.classList.remove("m-free","m-soon","m-prep","m-go","m-late","m-doomed"); el.classList.add("m-" + md.k, "tinted");
     el.style.setProperty("--card", col); el.style.setProperty("--ink", "#ffffff");
