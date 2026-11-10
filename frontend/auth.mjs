@@ -132,7 +132,7 @@ function render(){
   if(user && (mode === 'login' || mode === 'first')) show('me');
   if(!user && (mode === 'me' || mode === 'setpw')) show('login');
   const b = document.getElementById('openRoutes');
-  if(b) b.title = user ? `${memberName} · 내 경로` : '내 경로 · 로그인';
+  if(b){ b.title = user ? `${memberName}님 · 내 계정·내 경로` : '내 경로 · 로그인'; b.setAttribute('aria-label', b.title); }
   const lb = document.getElementById('loginBtn');
   if(lb){ lb.textContent = user ? (memberName ? `${memberName}님` : '내 계정') : '로그인'; lb.title = user ? '로그인됨 · 눌러서 내 계정 보기' : '로그인하면 내 경로가 폰·컴퓨터에 같이 저장돼'; }
 }

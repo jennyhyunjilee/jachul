@@ -373,6 +373,8 @@ svg.dial{max-width:min(300px,100%)}
 /* 로그인 안 했으면: ★(내 경로)는 숨기고, ⚙ 설정엔 기기 설정(알림·효과음·집 GPS·아두이노)만 */
 body:not(.signed-in) .acctonly,body:not(.signed-in) #openRoutes{display:none !important}
 body.signed-in .guestonly{display:none !important}
+/* 로그인하면 이름 버튼은 숨김: ★ 하나로 내 계정·내 경로 다 열림 */
+body.signed-in #loginBtn{display:none !important}
 @media (prefers-reduced-motion: reduce){ .dial .windwarn{animation:none} }
 @media (min-width:860px){ .dial .windwarn{display:none} }   /* 컴퓨터에선 위 큰 글씨로 보여줌 (폰은 위 글씨가 없어서 원 안에) */
 .dial .sweep{transform-box:view-box;transform-origin:150px 150px;animation:sweep 60s linear infinite}
