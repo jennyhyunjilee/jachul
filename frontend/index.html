@@ -365,7 +365,7 @@ svg.dial{max-width:min(300px,100%)}
 .dial .now-clock{font-size:21px;font-weight:700;fill:var(--ink);font-family:"GalmuriMono11","Galmuri11",monospace;letter-spacing:.02em}
 .dialwrap{--sweep:#ffe14a}
 /* 태엽: 감을수록 늦게 나감 → 감긴 바퀴(안쪽 빨간 고리) + 경고 글씨 깜빡 */
-.dial .coil{fill:none;stroke:#ff5a4f;stroke-width:3;stroke-dasharray:6 4;opacity:.85}
+.dial .coil{fill:none;stroke:#ff5a4f;stroke-width:2;stroke-dasharray:5 4;opacity:.8}
 .m-doomed .dial .coil{stroke:#ff3b30}
 .dial .windwarn{font-size:13px;font-weight:700;fill:#fff;animation:blink .8s steps(1,end) infinite}
 .dial .windturn{font-size:11px;fill:var(--muted)}
@@ -1560,7 +1560,8 @@ function drawDial(p){
   const turns = Math.floor(selOffset / W), kfrac = selOffset / W - turns;
   const [kx,ky] = polar(kfrac * 360);
   let coils = "";
-  for(let i = 1; i <= Math.min(turns, 6); i++) coils += `<circle class="coil" cx="${CX}" cy="${CY}" r="${R - 30 - i*6}"/>`;
+  // 감긴 바퀴는 원 바깥쪽에 겹겹이 (가운데 글씨 안 가리게), 맨 먼저 그려서 다른 것 밑에 깔림
+  for(let i = 1; i <= Math.min(turns, 6); i++) coils += `<circle class="coil" cx="${CX}" cy="${CY}" r="${R + 11 + i*4}"/>`;
   const lateMin = -sl, doom = (r.cut && sl < 0) || sl <= -30;
   const warn = selOffset > 0 && sl < 0 ? (doom ? WIND_DOOM : WIND_LATE)[Math.floor(lateMin / 7) % 4] : "";
   windWarnText = warn;
@@ -1599,6 +1600,7 @@ function drawDial(p){
   $("dialLegend").innerHTML = `<span><i style="background:var(--prep)"></i>준비 <b>${p.prepStart > t ? hhmm(p.prepStart) + "부터" : "지금"}</b></span><span><i style="background:var(--travel)"></i>출발 <b>${hhmm(p.leave)}</b></span>`;
   const clockTxt = [T.getHours(), T.getMinutes(), sec].map(n => String(n).padStart(2, "0")).join(":");
   $("dial").innerHTML = `
+    ${coils}
     <circle cx="${CX}" cy="${CY}" r="${R}" fill="none" stroke="var(--soft)" stroke-width="18"/>
     ${face}
     <text x="${CX}" y="${CY-26}" text-anchor="middle" class="now-clock">${clockTxt}</text>
@@ -1612,7 +1614,6 @@ function drawDial(p){
     <text x="${kx}" y="${ky+4}" text-anchor="middle" class="knoblab">나감</text>
     <text x="${CX}" y="${CY+3}" text-anchor="middle" class="center-when">${selOffset === 0 ? "지금 나가면" : dur(selOffset) + " 뒤에 나가면"}</text>
     <text x="${CX}" y="${CY+31}" text-anchor="middle" class="center-out" fill="${color}">${resShort}</text>
-    ${coils}
     ${turns ? `<text x="${CX}" y="${CY-50}" text-anchor="middle" class="windturn">태엽 ${turns}바퀴 감김</text>` : ""}
     ${warn ? `<text x="${CX}" y="${CY+56}" text-anchor="middle" class="windwarn">${warn}</text>` : ""}`;
 }
