@@ -2,11 +2,19 @@
 // ★ 내 경로 창(#routesDialog) 맨 위에 로그인 칸을 붙인다: 로그인 / 처음 왔어? 비밀번호 만들기 / 새 비밀번호 / 로그인됨.
 // - 회원은 명부(jachul_members)로 미리 등록돼 있다. 처음 온 회원은 메일 링크로 돌아와서 비밀번호를 정한다.
 // - 내 경로 목록은 페이지(index.html)가 관리하고, 로그인하면 Supabase(jachul_routes)와 맞춘다.
-//   페이지 → 'jachul:routes' (목록이 바뀜), 이 파일 → 'jachul:cloud-routes' (서버 목록을 넣어줘)
+//   페이지 → 'jachul:personal' (목표·경로 바뀜), 이 파일 → 'jachul:session' (로그인: 내 계정 것으로 바꿔) / 'jachul:signout' (지워)
 const cfg = window.JACHUL_CONFIG || {};
+// 로그인 유지: 체크하면 localStorage(브라우저 꺼도 유지), 안 하면 sessionStorage(이 탭 닫으면 로그아웃)
+const KEEP = 'jachul-keep';
+const keepOn = () => { try{ return localStorage.getItem(KEEP) !== '0'; }catch{ return false; } };
+const authStore = {
+  getItem: k => { try{ return localStorage.getItem(k) ?? sessionStorage.getItem(k); }catch{ return null; } },
+  setItem: (k, v) => { try{ if(keepOn()){ localStorage.setItem(k, v); sessionStorage.removeItem(k); } else { sessionStorage.setItem(k, v); localStorage.removeItem(k); } }catch{} },
+  removeItem: k => { try{ localStorage.removeItem(k); sessionStorage.removeItem(k); }catch{} },
+};
 const sb = window.supabase && cfg.supabaseUrl
-  ? window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseKey, {auth: {persistSession: true, detectSessionInUrl: true}}) : null;
-let user = null, memberName = '', routes = null, lastPushed = '', pushTimer = null, mode = 'login';
+  ? window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseKey, {auth: {persistSession: true, detectSessionInUrl: true, storage: authStore}}) : null;
+let user = null, memberName = '', lastPushed = '', pushTimer = null, mode = 'login';
 
 const ERR = {
   'Invalid login credentials': '이메일이나 비밀번호가 틀렸어. 처음이면 아래 "여기서 비밀번호 정하기"부터 해.',
@@ -29,6 +37,11 @@ const css = `
 .acct .msg-line{margin:10px 0 0;font-size:13px;font-weight:700;color:var(--late)}
 .acct .msg-line.ok{color:var(--ok)}
 .acct .msg-line:empty{display:none}
+.acct label.keep{display:flex;gap:8px;align-items:center;margin:12px 0 0;font-size:14px;cursor:pointer}
+.acct label.keep input{width:20px;height:20px;margin:0;flex:none;accent-color:var(--ok,#2a9d5c)}
+.acct label.keep{flex-wrap:wrap;row-gap:2px}
+.acct label.keep small{flex-basis:100%;padding-left:28px;color:var(--muted);font-size:12px}
+.acct [data-import]{margin-top:10px;font-size:13px}
 .acct .admin{margin-top:14px;padding-top:12px;border-top:2px dashed var(--line,#999)}
 .acct .admin h3{margin:0 0 6px;font-size:15px}
 .acct .reqs{list-style:none;margin:0;padding:0;display:grid;gap:8px}
@@ -51,6 +64,7 @@ box.innerHTML = `
     <p class="hint">로그인하면 내 경로가 폰이랑 컴퓨터에 같이 저장돼.</p>
     <form data-form="login"><label for="acEmail">이메일</label><input id="acEmail" type="email" autocomplete="username" required>
       <label for="acPw">비밀번호</label><input id="acPw" type="password" autocomplete="current-password" required>
+      <label class="keep"><input type="checkbox" data-keep checked> 로그인 유지 <small>(내 폰·컴퓨터면 체크. 같이 쓰는 컴퓨터면 끄기)</small></label>
       <button class="save" type="submit">로그인</button></form>
     <button type="button" class="linkish" data-go="first">처음 왔어? / 비밀번호 잊었어? 여기서 비밀번호 정하기</button>
   </div>
@@ -60,6 +74,7 @@ box.innerHTML = `
       <label for="acCode">가입 코드</label><input id="acCode" autocomplete="one-time-code" autocapitalize="characters" spellcheck="false" placeholder="ABCD-1234" maxlength="12" required>
       <label for="acFirstPw">새 비밀번호 (8자 넘게)</label><input id="acFirstPw" type="password" autocomplete="new-password" minlength="8" maxlength="72" required>
       <label for="acFirstPw2">한 번 더</label><input id="acFirstPw2" type="password" autocomplete="new-password" minlength="8" maxlength="72" required>
+      <label class="keep"><input type="checkbox" data-keep checked> 로그인 유지 <small>(같이 쓰는 컴퓨터면 끄기)</small></label>
       <button class="save" type="submit">비밀번호 정하고 로그인</button></form>
     <button type="button" class="linkish" data-go="ask">가입 코드 없어? / 비밀번호 잊었어? 코드 달라고 하기</button>
     <button type="button" class="linkish" data-go="login">← 로그인으로</button>
@@ -80,6 +95,7 @@ box.innerHTML = `
   </div>
   <div data-pane="me" hidden>
     <p class="who"><b data-name></b> 로그인됨<small data-sync></small></p>
+    <button type="button" data-import hidden></button>
     <div class="row2"><button type="button" data-go="setpw">비밀번호 바꾸기</button><button type="button" data-logout>로그아웃</button></div>
     <div class="admin" data-admin hidden>
       <h3>관리자 · 가입 코드 요청 <span data-reqn></span></h3>
@@ -121,33 +137,40 @@ function render(){
 }
 
 // ---- 내 경로 동기화 ----
-const localRoutes = () => { try{ return JSON.parse(localStorage.getItem('jansori-v1'))?.routes || []; }catch{ return []; } };
+// 페이지(index.html)가 계정 정보(목표·경로)를 바꾸면 'jachul:personal'로 알려줌 → 내 계정 줄에만 저장 (RLS: 본인 것만)
+let latest = null, synced = false;
 async function push(){
-  if(!user || !routes) return;
-  const body = JSON.stringify(routes);
+  if(!user || !synced || !latest || latest.owner !== user.id) return;
+  const row = {user_id: user.id, favorites: latest.routes, updated_at: new Date().toISOString()};
+  if(latest.goal) row.goal = latest.goal;
+  const body = JSON.stringify(row.favorites) + JSON.stringify(row.goal || null);
   if(body === lastPushed) return;
-  const {error} = await sb.from('jachul_routes').upsert({user_id: user.id, favorites: routes, routines: [], updated_at: new Date().toISOString()});
+  const {error} = await sb.from('jachul_routes').upsert(row);
   if(!error) lastPushed = body;
-  q('[data-sync]').textContent = error ? '저장 실패. 이 기기에만 있어.' : '내 경로가 어디서든 같이 보여.';
+  q('[data-sync]').textContent = error ? '저장 실패. 잠깐 뒤에 다시 해볼게.' : '목표랑 경로가 내 계정에 저장돼 있어.';
+  if(error){ clearTimeout(pushTimer); pushTimer = setTimeout(push, 5000); }
 }
+// 로그인하면 서버에 있는 내 것만 가져와서 화면을 내 걸로 바꿈 (다른 사람 것·손님 것과 안 섞음)
 async function pull(){
-  const {data, error} = await sb.from('jachul_routes').select('favorites').maybeSingle();
-  if(error){ q('[data-sync]').textContent = '저장한 경로를 못 불러왔어.'; return; }
-  const cloud = Array.isArray(data?.favorites) ? data.favorites : [];
-  // 이 기기에만 있던 경로도 합침 (이름 같으면 서버 것 우선)
-  const merged = [...cloud];
-  for(const r of routes || localRoutes()) if(r && !merged.some(x => x.name === r.name)) merged.push(r);
-  routes = merged.slice(0, 20);
-  lastPushed = JSON.stringify(cloud);
-  window.dispatchEvent(new CustomEvent('jachul:cloud-routes', {detail: routes}));
-  push();
+  const {data, error} = await sb.from('jachul_routes').select('favorites, goal').maybeSingle();
+  if(error){ q('[data-sync]').textContent = '저장한 걸 못 불러왔어. 새로고침 해봐.'; return; }
+  synced = true; lastPushed = '';
+  window.dispatchEvent(new CustomEvent('jachul:session', {detail: {uid: user.id, cloud: data ? {routes: data.favorites, goal: data.goal} : null}}));
+  renderGuest();
 }
-window.addEventListener('jachul:routes', e => {
-  routes = Array.isArray(e.detail) ? e.detail : [];
-  if(!user) return;
+window.addEventListener('jachul:personal', e => {
+  latest = e.detail;
+  if(!user || !synced) return;
   clearTimeout(pushTimer);
   pushTimer = setTimeout(push, 600);
 });
+// 손님일 때 이 기기에 저장한 경로 → 내 계정으로 옮길지 (본인이 눌러야만)
+function renderGuest(){
+  const n = (window.jachulGuestRoutes && window.jachulGuestRoutes()) || 0;
+  const b = q('[data-import]');
+  b.hidden = !user || !n;
+  b.textContent = `로그인 전에 이 기기에 저장한 경로 ${n}개 내 계정에 넣기`;
+}
 
 async function signedIn(u){
   user = u;
@@ -166,6 +189,7 @@ box.addEventListener('click', async e => {
   if(t.dataset.go){ show(t.dataset.go); if(t.dataset.go === 'first' && q('#acEmail').value) q('#acFirst').value ||= q('#acEmail').value;
     if(t.dataset.go === 'ask') q('#akEmail').value ||= q('#acFirst').value || q('#acEmail').value; return; }
   if(t.hasAttribute('data-logout')){ await sb.auth.signOut(); }
+  if(t.hasAttribute('data-import')){ window.dispatchEvent(new CustomEvent('jachul:import-guest')); renderGuest(); msg('옮겼어. 이제 내 계정에 저장돼.', true); }
   if(t.dataset.issue){ const r = reqs.find(x => String(x.id) === t.dataset.issue); if(r) issue(r.email, r.name, t.closest('li')); }
   if(t.dataset.dismiss){ await admin({action: 'dismiss', id: Number(t.dataset.dismiss)}); loadReqs(); }
   if(t.hasAttribute('data-copy')){
@@ -176,6 +200,8 @@ box.addEventListener('click', async e => {
 box.addEventListener('submit', async e => {
   e.preventDefault();
   const f = e.target, kind = f.dataset.form;
+  const keep = f.querySelector('[data-keep]');
+  if(keep) try{ localStorage.setItem(KEEP, keep.checked ? '1' : '0'); }catch{}
   if(kind === 'login'){
     busy(f, true);
     const {error} = await sb.auth.signInWithPassword({email: q('#acEmail').value.trim(), password: q('#acPw').value});
@@ -261,7 +287,8 @@ if(dlg && sb){
     if(event === 'PASSWORD_RECOVERY') setTimeout(() => open('setpw'), 300);   // 메일 링크로 돌아오면 바로 비밀번호 정하기
     const u = session?.user || null;
     if(u && u.id !== user?.id) setTimeout(() => signedIn(u), 0);
-    if(!u && user){ user = null; memberName = ''; lastPushed = ''; reqs = []; q('[data-admin]').hidden = true; render(); }
+    if(!u && user){ user = null; memberName = ''; lastPushed = ''; synced = false; clearTimeout(pushTimer); reqs = []; q('[data-admin]').hidden = true; window.dispatchEvent(new CustomEvent('jachul:signout')); render(); renderGuest(); }
+    if(!u && !user && event === 'INITIAL_SESSION') window.dispatchEvent(new CustomEvent('jachul:signout'));   // 시작할 때 로그인 안 돼 있으면 남은 계정 정보 지움
   });
   render();
 }
