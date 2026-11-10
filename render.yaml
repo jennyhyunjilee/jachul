@@ -21,5 +21,5 @@ services:
         sync: false
       - key: ANTHROPIC_API_KEY
         sync: false
-      - key: GEMINI_API_KEY      # 무료 채팅 AI (Google AI Studio 키)
+      - key: GROQ_API_KEY        # 무료 채팅 AI (console.groq.com 키)
         sync: false
