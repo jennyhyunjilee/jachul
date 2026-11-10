@@ -182,6 +182,21 @@ input[type=range]{width:100%;accent-color:var(--travel)}
 .sgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(56px,1fr));gap:6px}
 .swatch{display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 2px;font-size:10.5px;background:var(--card)}
 .swatch i{display:block;width:22px;height:22px;background:var(--sw);border:2px solid #111}
+/* 폰: 칸마다 따로 스크롤하면 칸이 손톱만 해짐 → 고르는 부분 전체를 한 번에 스크롤, 칸은 크게 */
+@media (max-width:600px){
+  .kpreview{width:88px;height:88px;margin:4px auto 2px}
+  #kidOptions{overflow-y:auto;overscroll-behavior:contain;gap:2px;padding-right:4px}
+  .kbox,.kbox.kpick{flex:none}
+  .kscroll{flex:none;overflow:visible;border-top:0;padding:2px 2px 6px}
+  .kgrid{grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+  .kopt{padding:8px 2px;font-size:13px}
+  .kopt svg{width:64px;height:64px}
+  .kgrid.ktwo .kopt svg{width:44px;height:44px}
+  .sgrid{grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+  .swatch{padding:8px 2px;font-size:12px}
+  .swatch i{width:32px;height:32px}
+  .ktabs button{padding:10px 0;font-size:14px}
+}
 .runner.moving .fa{animation:runA .6s steps(1,end) infinite}
 .runner.moving .fb{animation:runB .6s steps(1,end) infinite}
 @keyframes runA{0%{opacity:1}50%{opacity:0}}
