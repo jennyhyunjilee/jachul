@@ -2067,7 +2067,7 @@ function burstSvg(label, cx, cy){
     cells.push(`<rect x="${x*u}" y="${y*u}" width="${u+.1}" height="${u+.1}" fill="${edge ? "#e5322d" : edge2 ? "#111" : "var(--accent)"}"/>`);
   }
   return `<g transform="translate(${cx - W*u/2} ${cy - H*u/2})" shape-rendering="crispEdges">${cells.join("")}
-    <text x="${W*u/2}" y="${H*u/2 + 5.5}" text-anchor="middle" font-size="15.5" font-weight="700" fill="#111">${label}</text></g>`;
+    <text x="${W*u/2}" y="${H*u/2 + 5.5}" text-anchor="middle" font-size="${label.length <= 5 ? 15.5 : label.length <= 6 ? 13.5 : 12}" font-weight="700" fill="#111">${label}</text></g>`;
 }
 function renderLive(p){
   const t = now(), past = t > p.leave;
@@ -2083,8 +2083,8 @@ function renderLive(p){
     const n = nameOf(id), x = xOf(k);
     if(k === 0){
       svg += `<circle cx="${x}" cy="${y}" r="9" fill="var(--accent)" stroke="var(--line)" stroke-width="2.5"/>`;
-      const short = n.length>5 ? n.slice(0,4)+"…" : n;
-      svg += burstSvg(`여기! ${short}`, Math.min(x - 18, VW - 74), y + 37);
+      const short = n.length>6 ? n.slice(0,5)+"…" : n;
+      svg += burstSvg(`${short}!`, Math.min(x - 18, VW - 74), y + 37);   // "홍대입구!" (여기! 붙이면 글자가 터짐 밖으로 나감)
     } else {
       svg += `<circle cx="${x}" cy="${y}" r="5.5" fill="var(--card)" stroke="var(--line)" stroke-width="2"/>`;
       svg += `<text x="${x}" y="${y+22}" text-anchor="middle" font-size="10" fill="var(--muted)">${n.length>5?n.slice(0,4)+"…":n}</text>`;
