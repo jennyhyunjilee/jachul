@@ -2638,10 +2638,11 @@ window.jachul = {alarm: () => openAlarm(), mood: () => ready() ? serialMood(mood
   // claude.ai 아티팩트 안에서만 있음: 채팅을 Claude에 연결
   try{ if(window.claude && typeof window.claude.use === "function") window.claude.use("sample").then(x => { sampleCap = x; }).catch(() => {}); }catch{}
   // 상대 경로: 서버 하위 폴더에 올려도 동작. index.html만 올린 경우엔 둘 다 실패 → 안에 넣어둔 노선도 사용
-  try{ const j = await (await fetch(API("api/status"))).json(); STATUS = typeof j.key === "boolean" ? j : {key:false}; }catch{ STATUS = {key:false}; }
+  // 무료 서버가 자고 있으면 깨는 데 20~50초 걸림 → 화면부터 그리게 3.5초만 기다리고, 나머진 아래에서 계속 확인
+  try{ const j = await (await fetch(API("api/status"), {signal: AbortSignal.timeout(3500)})).json(); STATUS = typeof j.key === "boolean" ? j : {key:false}; }catch{ STATUS = {key:false}; }
   // 무료 서버는 한동안 안 쓰면 잠들어서 처음엔 실패할 수 있음: 15초마다 몇 번 더 확인
   if(!STATUS.key) (async () => { for(let i = 0; i < 8 && !STATUS.key; i++){
-    await new Promise(r => setTimeout(r, 15000));
+    await new Promise(r => setTimeout(r, i ? 15000 : 4000));
     try{ const j = await (await fetch(API("api/status"))).json(); if(j.key){ STATUS = j; renderSource(); if(ready()) fetchLive(); } }catch{}
   } })();
   let net = null;
