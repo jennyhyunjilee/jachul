@@ -374,6 +374,7 @@ svg.dial{max-width:min(300px,100%)}
 body:not(.signed-in) .acctonly,body:not(.signed-in) #openRoutes{display:none !important}
 body.signed-in .guestonly{display:none !important}
 @media (prefers-reduced-motion: reduce){ .dial .windwarn{animation:none} }
+@media (min-width:860px){ .dial .windwarn{display:none} }   /* 컴퓨터에선 위 큰 글씨로 보여줌 (폰은 위 글씨가 없어서 원 안에) */
 .dial .sweep{transform-box:view-box;transform-origin:150px 150px;animation:sweep 60s linear infinite}
 @keyframes sweep{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
 /* 지금 상황: 버튼 셋을 원 바로 밑에 한 줄로 */
@@ -1524,7 +1525,7 @@ function arc(d0, d1){
   const [x0,y0]=polar(d0),[x1,y1]=polar(d1);
   return `M${x0} ${y0} A${R} ${R} 0 ${d1-d0>180?1:0} 1 ${x1} ${y1}`;
 }
-let lastKind = null, lastSel = 0, windTurns = 0, prevDeg = null;
+let lastKind = null, lastSel = 0, windTurns = 0, prevDeg = null, windWarnText = "";
 const WIND_MAX = 8;   // 태엽 최대 8바퀴
 // 감아서 늦어질 때 경고 (충청도 말투). 분 단위로 고정해서 1초마다 글씨가 바뀌진 않게
 const WIND_LATE = ["워메, 지각이여!", "이러다 늦어유~ 얼른 가유", "큰일 났슈, 지각이유!", "뛰어도 늦어유, 서둘러유!"];
@@ -1562,6 +1563,8 @@ function drawDial(p){
   for(let i = 1; i <= Math.min(turns, 6); i++) coils += `<circle class="coil" cx="${CX}" cy="${CY}" r="${R - 30 - i*6}"/>`;
   const lateMin = -sl, doom = (r.cut && sl < 0) || sl <= -30;
   const warn = selOffset > 0 && sl < 0 ? (doom ? WIND_DOOM : WIND_LATE)[Math.floor(lateMin / 7) % 4] : "";
+  windWarnText = warn;
+  if(warn) $("moodLine").textContent = warn;   // 위 큰 글씨("준비해. 지금." 자리)를 경고로 바꿈
   const ticks = [0].map(f=>{
     // 좌우 눈금은 원 바깥쪽으로 붙여서 링이랑 안 겹치게
     const side = f === .25 ? "start" : f === .75 ? "end" : "middle";
@@ -2292,7 +2295,7 @@ function renderMood(p){
     el.style.setProperty("--card", col); el.style.setProperty("--ink", "#ffffff");
     el.style.setProperty("--muted", "rgba(255,255,255,.78)"); el.style.setProperty("--soft", "rgba(255,255,255,.22)");
   }
-  $("moodLine").textContent = M.ring;
+  $("moodLine").textContent = windWarnText || M.ring;
   if(md.k !== lastMood){
     lastMood = md.k;
     const m = current();
