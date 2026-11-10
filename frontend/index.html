@@ -431,6 +431,11 @@ dialog[open]{animation:rise .25s steps(3,end)}
 .toast{position:fixed;left:50%;bottom:max(16px, env(safe-area-inset-bottom, 0px));transform:translateX(-50%);z-index:20;width:min(420px,calc(100% - 32px));background:var(--card);color:var(--ink);padding:10px 14px;font-size:14px;border-style:solid;border-width:6px;border-image:var(--pxb) 2 / 6px / 0 stretch;background-clip:padding-box;filter:drop-shadow(4px 4px 0 var(--shadow))}
 .toast b{display:block}
 #routesList button{justify-content:space-between}
+.rcount{margin:8px 0 4px;font-size:12px}
+.rreset{margin-top:12px;display:flex;flex-wrap:wrap;gap:8px;align-items:center;font-size:13px}
+.rreset[hidden],.rreset [hidden]{display:none !important}
+.rreset button{padding:6px 10px;font-size:13px}
+#routesResetBtn{background:none;border:none;filter:none !important;color:var(--late);text-decoration:underline;text-underline-offset:3px;padding:6px 0}
 #routesList .del{flex:none;width:40px;height:40px;padding:0;font-size:16px;line-height:1;display:flex;align-items:center;justify-content:center;text-align:center}
 .rrow{display:flex;gap:6px;align-items:center}
 .rrow > button:first-child{flex:1;min-width:0}
@@ -638,10 +643,15 @@ dialog[open]{animation:rise .25s steps(3,end)}
     <div class="khead"><h2 id="routesTitle">내 경로</h2><button type="button" class="kclose" id="routesClose" aria-label="닫기">✕</button></div>
     <p class="hint acctonly">자주 가는 길 저장해두고 눌러서 바로 불러와. 지금 목표랑 저장한 길은 내 계정에 저장돼 (나만 보여).</p>
     <ul class="list acctonly" id="routesList"></ul>
+    <p class="hint rcount acctonly" id="routesCount"></p>
     <form class="askform acctonly" id="routeSave" autocomplete="off">
       <input id="routeName" maxlength="30" placeholder="이름 (예: 학교)" aria-label="경로 이름">
       <button type="submit">지금 목표 저장</button>
     </form>
+    <div class="rreset acctonly" id="routesReset" hidden>
+      <button type="button" id="routesResetBtn">저장한 길 전부 지우기</button>
+      <span id="routesResetAsk" hidden>정말 다 지워? <button type="button" id="routesResetYes">응, 다 지워</button><button type="button" id="routesResetNo">아니</button></span>
+    </div>
   </div>
 </dialog>
 
@@ -821,7 +831,7 @@ window.addEventListener("jachul:signout", () => { if(s.owner) clearAccount(); })
 // 손님일 때 이 기기에 저장한 경로를 내 계정으로 옮기기 (본인이 눌렀을 때만)
 window.addEventListener("jachul:import-guest", () => {
   const g = guestRoutes(); if(!g.length || !s.owner) return;
-  s.routes = [...s.routes, ...g.filter(r => !s.routes.some(x => x.name === r.name))].slice(0, 20);
+  s.routes = [...s.routes, ...g.filter(r => !s.routes.some(x => x.name === r.name))].slice(0, ROUTES_MAX);
   try{ const gs = JSON.parse(localStorage.getItem("jansori-guest")) || {}; gs.routes = []; localStorage.setItem("jansori-guest", JSON.stringify(gs)); }catch{}
   store.set(s); renderRoutes();
 });
@@ -1562,8 +1572,7 @@ function drawDial(p){
   const turns = Math.floor(selOffset / W), kfrac = selOffset / W - turns;
   const [kx,ky] = polar(kfrac * 360);
   let coils = "";
-  // 감긴 바퀴는 원 바깥쪽에 겹겹이 (가운데 글씨 안 가리게), 맨 먼저 그려서 다른 것 밑에 깔림
-  for(let i = 1; i <= Math.min(turns, 6); i++) coils += `<circle class="coil" cx="${CX}" cy="${CY}" r="${R + 11 + i*4}"/>`;
+  // 감긴 바퀴는 고리 대신 글씨로만 ("태엽 N바퀴 감김")
   const lateMin = -sl, doom = (r.cut && sl < 0) || sl <= -30;
   const warn = selOffset > 0 && sl < 0 ? (doom ? WIND_DOOM : WIND_LATE)[Math.floor(lateMin / 7) % 4] : "";
   windWarnText = warn;
@@ -2537,8 +2546,11 @@ $("micBtn").addEventListener("click", () => {
 });
 
 // ---- 내 경로 (지금은 이 기기에만. 로그인 붙으면 여기 목록을 서버랑 맞추면 됨) ----
+const ROUTES_MAX = 5;   // 계정마다 저장 목표 5개까지
 function renderRoutes(){
   const list = $("routesList");
+  $("routesCount").textContent = `저장한 목표 ${s.routes.length}/${ROUTES_MAX}${s.routes.length >= ROUTES_MAX ? " · 꽉 참. ✕로 지우거나 같은 이름으로 덮어써" : ""}`;
+  $("routesReset").hidden = !s.routes.length; $("routesResetAsk").hidden = true; $("routesResetBtn").hidden = false;
   if(!s.routes.length){ list.innerHTML = `<li class="sec">아직 저장한 경로 없어. 아래에 이름 쓰고 저장해.</li>`; return; }
   list.innerHTML = s.routes.map((r, i) => `<li class="rrow"><button type="button" data-load="${i}"><span></span><small class="hint"></small></button><button type="button" class="del" data-del="${i}" aria-label="삭제">✕</button></li>`).join("");
   list.querySelectorAll("[data-load]").forEach(b => {
@@ -2564,11 +2576,16 @@ $("routesList").addEventListener("click", e => {
   goalChanged(); $("routesDialog").close(); go(0);
   toast({title:`'${r.name}' 불러왔어.`, body:"맞으면 '세팅' 눌러."});
 });
+$("routesResetBtn").addEventListener("click", () => { $("routesResetBtn").hidden = true; $("routesResetAsk").hidden = false; });
+$("routesResetNo").addEventListener("click", () => renderRoutes());
+$("routesResetYes").addEventListener("click", () => { s.routes = []; store.set(s); renderRoutes(); toast({title:"다 지웠어.", body:"새로 저장해."}); });
 $("routeSave").addEventListener("submit", e => {
   e.preventDefault();
   if(!s.from || !s.to || !s.arrive) return toast({title:"저장할 목표가 없어.", body:"역이랑 시간부터 정해."});
   const name = $("routeName").value.trim() || `${s.from} → ${s.to}`;
-  s.routes = [{name, from:s.from, to:s.to, arrive:s.arrive, prep:s.prep}, ...s.routes.filter(r => r.name !== name)].slice(0, 20);
+  const same = s.routes.some(r => r.name === name);
+  if(!same && s.routes.length >= ROUTES_MAX) return toast({title:`${ROUTES_MAX}개 꽉 찼어.`, body:"✕로 하나 지우거나, 같은 이름으로 저장하면 그걸 바꿔."});
+  s.routes = [{name, from:s.from, to:s.to, arrive:s.arrive, prep:s.prep}, ...s.routes.filter(r => r.name !== name)].slice(0, ROUTES_MAX);
   store.set(s); renderRoutes(); $("routeName").value = "";
 });
 
