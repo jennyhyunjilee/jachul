@@ -370,6 +370,9 @@ svg.dial{max-width:min(300px,100%)}
 .dial .windwarn{font-size:13px;font-weight:700;fill:#fff;animation:blink .8s steps(1,end) infinite}
 .dial .windturn{font-size:11px;fill:var(--muted)}
 .windreset{background:#fff;color:#111}
+/* 로그인 안 했으면: ★(내 경로)는 숨기고, ⚙ 설정엔 기기 설정(알림·효과음·집 GPS·아두이노)만 */
+body:not(.signed-in) .acctonly,body:not(.signed-in) #openRoutes{display:none !important}
+body.signed-in .guestonly{display:none !important}
 @media (prefers-reduced-motion: reduce){ .dial .windwarn{animation:none} }
 .dial .sweep{transform-box:view-box;transform-origin:150px 150px;animation:sweep 60s linear infinite}
 @keyframes sweep{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
@@ -573,7 +576,7 @@ dialog[open]{animation:rise .25s steps(3,end)}
           <p class="hint" id="routeWho"></p>
           <div class="row">
             <button type="button" id="homeBtn2">여기가 집이야</button>
-            <button type="button" class="kidbtn" id="kidBtn2"><span id="kidMini2"></span>꾸미기</button>
+            <button type="button" class="kidbtn acctonly" id="kidBtn2"><span id="kidMini2"></span>꾸미기</button>
           </div>
           <p class="hint" style="margin-top:12px">경로 위 캐릭터가 너야. GPS로 집을 나온 걸 보면 계획 시각대로 따라 달려.</p>
         </section>
@@ -626,9 +629,9 @@ dialog[open]{animation:rise .25s steps(3,end)}
 <dialog id="routesDialog" aria-labelledby="routesTitle">
   <div class="sheet">
     <div class="khead"><h2 id="routesTitle">내 경로</h2><button type="button" class="kclose" id="routesClose" aria-label="닫기">✕</button></div>
-    <p class="hint">자주 가는 길 저장해두고 눌러서 바로 불러와. 로그인하면 지금 목표랑 저장한 길이 내 계정에 저장돼 (나만 보여). 로그인 안 하면 이 기기에만.</p>
-    <ul class="list" id="routesList"></ul>
-    <form class="askform" id="routeSave" autocomplete="off">
+    <p class="hint acctonly">자주 가는 길 저장해두고 눌러서 바로 불러와. 지금 목표랑 저장한 길은 내 계정에 저장돼 (나만 보여).</p>
+    <ul class="list acctonly" id="routesList"></ul>
+    <form class="askform acctonly" id="routeSave" autocomplete="off">
       <input id="routeName" maxlength="30" placeholder="이름 (예: 학교)" aria-label="경로 이름">
       <button type="submit">지금 목표 저장</button>
     </form>
@@ -673,8 +676,9 @@ dialog[open]{animation:rise .25s steps(3,end)}
 <dialog id="settings">
   <form class="sheet" id="form" method="dialog">
     <div class="khead"><h2>설정</h2><button type="button" class="kclose" id="settingsX" aria-label="닫기 (저장 안 함)">✕</button></div>
-    <p class="hint">한 번 넣으면 이대로 기억해.</p>
-    <div class="grid">
+    <p class="hint acctonly">한 번 넣으면 내 계정에 기억해.</p>
+    <p class="hint guestonly">지금은 이 기기 설정만 보여. 로그인하면 걷는 시간·여유·보챌 간격·캐릭터도 여기서 바꾸고 내 계정에 저장돼.</p>
+    <div class="grid acctonly">
       <div><label for="walkTo">집 → 출발역 도보 (분)</label><input id="walkTo" name="walkTo" type="number" min="0"></div>
       <div><label for="walkFrom">도착역 → 목적지 도보 (분)</label><input id="walkFrom" name="walkFrom" type="number" min="0"></div>
       <div><label for="buffer">여유 (분)</label><input id="buffer" name="buffer" type="number" min="0"></div>
@@ -683,8 +687,8 @@ dialog[open]{animation:rise .25s steps(3,end)}
           <option value="1">1분마다</option><option value="5">5분마다</option><option value="10">10분마다</option><option value="15">15분마다</option><option value="20">20분마다</option><option value="30">30분마다</option>
         </select></div>
     </div>
-    <label style="margin-top:14px">내 캐릭터 (경로 위에서 달리는 나)</label>
-    <button type="button" class="kidbtn" id="kidFromSettings"><span id="kidMini"></span>꾸미기</button>
+    <label class="acctonly" style="margin-top:14px">내 캐릭터 (경로 위에서 달리는 나)</label>
+    <button type="button" class="kidbtn acctonly" id="kidFromSettings"><span id="kidMini"></span>꾸미기</button>
     <div class="row">
       <button type="button" id="notifyBtn">알림 켜기</button>
       <button type="button" id="sfxBtn" aria-pressed="true">효과음 ON</button>

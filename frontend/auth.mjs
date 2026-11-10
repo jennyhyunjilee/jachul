@@ -61,7 +61,7 @@ const box = document.createElement('div');
 box.className = 'acct';
 box.innerHTML = `
   <div data-pane="login">
-    <p class="hint">로그인하면 내 경로가 폰이랑 컴퓨터에 같이 저장돼.</p>
+    <p class="hint">로그인하면 이런 게 생겨:<br>★ <b>내 경로</b>: 자주 가는 길 저장해두고 바로 불러오기<br>⚙ <b>설정</b>: 캐릭터 꾸미기, 걷는 시간·여유·보챌 간격<br>지금 목표까지 다 내 계정에 저장돼서 폰·컴퓨터 어디서든 그대로야. (알림·효과음·GPS·아두이노는 로그인 없이도 ⚙에서 돼)</p>
     <form data-form="login"><label for="acEmail">이메일</label><input id="acEmail" type="email" autocomplete="username" required>
       <label for="acPw">비밀번호</label><input id="acPw" type="password" autocomplete="current-password" required>
       <label class="keep"><input type="checkbox" data-keep checked> 로그인 유지 <small>(내 폰·컴퓨터면 체크. 같이 쓰는 컴퓨터면 끄기)</small></label>
@@ -127,6 +127,7 @@ function show(pane){
 function msg(t, ok = false){ q('[data-msg]').textContent = t; q('[data-msg]').classList.toggle('ok', ok); }
 function open(pane){ show(pane); if(!dlg.open) document.getElementById('openRoutes').click(); }
 function render(){
+  document.body.classList.toggle('signed-in', !!user && synced);   // ★·계정 설정은 로그인(내 정보 불러온 뒤)에만
   q('[data-name]').textContent = memberName ? `${memberName}님` : '';
   if(user && (mode === 'login' || mode === 'first')) show('me');
   if(!user && (mode === 'me' || mode === 'setpw')) show('login');
@@ -154,7 +155,7 @@ async function push(){
 async function pull(){
   const {data, error} = await sb.from('jachul_routes').select('favorites, goal').maybeSingle();
   if(error){ q('[data-sync]').textContent = '저장한 걸 못 불러왔어. 새로고침 해봐.'; return; }
-  synced = true; lastPushed = '';
+  synced = true; lastPushed = ''; render();
   window.dispatchEvent(new CustomEvent('jachul:session', {detail: {uid: user.id, cloud: data ? {routes: data.favorites, goal: data.goal} : null}}));
   renderGuest();
 }
