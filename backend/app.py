@@ -133,5 +133,5 @@ if __name__ == '__main__':
     p.add_argument('--host', default=os.environ.get('HOST', '127.0.0.1'))
     a = p.parse_args()
     print(f'쟈철 백엔드: http://{a.host}:{a.port}/' + ('' if SERVE_FRONTEND else ' (API만)')
-          + f" · 실시간 {'켜짐' if subway.KEY else '꺼짐'} · Claude 채팅 {'켜짐' if chat.ready() else '꺼짐'}", flush=True)
+          + f" · 실시간 {'켜짐' if subway.KEY else '꺼짐'} · AI 채팅 {'Claude' if chat.claude_ready() else 'Gemini' if chat.gemini_ready() else '꺼짐'}", flush=True)
     ThreadingHTTPServer((a.host, a.port), Handler).serve_forever()

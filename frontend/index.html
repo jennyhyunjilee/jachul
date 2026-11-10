@@ -409,6 +409,9 @@ body.signed-in .guestonly{display:none !important}
 dialog.alarm{width:min(460px,calc(100% - 24px));color:var(--ink)}
 dialog[open]{animation:rise .25s steps(3,end)}
 .alarm .aclock{font-size:13px;color:var(--muted)}
+.alarm .khead .voicebtn{margin-left:auto;margin-right:8px;padding:4px 8px;font-size:12px}
+.askform .askmic{flex:none;width:44px;padding:0;font-size:18px}
+.askform .askmic.rec{background:var(--late);color:#fff;animation:blink .8s steps(1,end) infinite}
 .alarm .arow{max-width:100%;margin-top:4px}
 .alarm .avatar .lid{animation:lid 4.2s steps(1,end) infinite}
 .alarm .msg.agent{font-size:15.5px}
@@ -600,7 +603,7 @@ dialog[open]{animation:rise .25s steps(3,end)}
 <!-- 알람: 열차 캐릭터가 솔직하게 한마디 (아두이노 버튼으로도 열림) -->
 <dialog id="alarm" class="alarm" aria-labelledby="alarmMsg">
   <div class="sheet">
-    <div class="khead"><span class="mono aclock" id="alarmClock"></span><button type="button" class="kclose" id="alarmClose" aria-label="닫기">✕</button></div>
+    <div class="khead"><span class="mono aclock" id="alarmClock"></span><button type="button" class="mini voicebtn" id="voiceBtn" aria-pressed="false">🔇 읽어주기</button><button type="button" class="kclose" id="alarmClose" aria-label="닫기">✕</button></div>
     <div class="msg me" id="alarmQ" hidden></div>
     <div class="arow"><div class="avatar" id="alarmFace"></div><div class="abody"><div class="aname">쟈철</div><div class="msg agent" id="alarmMsg"></div></div></div>
     <div class="chips needgoal" id="alarmChips">
@@ -614,7 +617,8 @@ dialog[open]{animation:rise .25s steps(3,end)}
       <button data-ask="excuse">늦는다고 뭐라 해?</button>
     </div>
     <form class="askform needgoal" id="askForm" autocomplete="off">
-      <input id="askText" maxlength="200" placeholder="쟈철한테 아무거나 물어봐" aria-label="쟈철한테 물어보기">
+      <button type="button" class="askmic" id="askMic" aria-label="말로 물어보기" aria-pressed="false">🎤</button>
+      <input id="askText" maxlength="200" placeholder="쟈철한테 아무거나 물어봐 (🎤 누르고 말해도 돼)" aria-label="쟈철한테 물어보기">
       <button type="submit">보내기</button>
     </form>
     <div class="arow2">
@@ -1309,7 +1313,7 @@ function reply(question, answer){
   if(!$("alarm").open) $("alarm").showModal();
   renderAlarm({typing:true}, question);
   Promise.all([Promise.resolve().then(answer), new Promise(r => setTimeout(r, 650))])
-    .then(([a]) => renderAlarm(a, question))
+    .then(([a]) => { renderAlarm(a, question); speak(a); })
     .catch(() => renderAlarm({level:"warn", face:1, title:"앗, 대답이 꼬였어.", body:"다시 물어봐."}, question));
 }
 
@@ -2152,6 +2156,42 @@ $("askForm").addEventListener("submit", e => {
   $("askText").value = "";
   reply(q, () => STATUS.claude ? askClaude(q).catch(() => localAnswer(q))
     : sampleCap ? askSample(q).catch(() => localAnswer(q)) : localAnswer(q));
+});
+// ---- 말로 듣기·말로 묻기 (브라우저 내장이라 무료) ----
+// 읽어주기 켜면 쟈철 대답을 소리로 읽어줌. 🎤로 물어보면 그 대답은 자동으로 읽어줌 (귀찮으니까)
+let askedByVoice = false;
+function speak(m){
+  if(!m || !m.title || !("speechSynthesis" in window) || !(s.voiceOn || askedByVoice)) return;
+  askedByVoice = false;
+  const u = new SpeechSynthesisUtterance(`${m.title}. ${m.body || ""}`.replace(/[\u{1F300}-\u{1FAFF}\u2600-\u27BF]/gu, ""));
+  u.lang = "ko-KR"; u.rate = 1.08;
+  const v = speechSynthesis.getVoices().find(v => /^ko/i.test(v.lang));
+  if(v) u.voice = v;
+  speechSynthesis.cancel(); speechSynthesis.speak(u);
+}
+function renderVoice(){ $("voiceBtn").textContent = s.voiceOn ? "🔊 읽어주기 ON" : "🔇 읽어주기"; $("voiceBtn").setAttribute("aria-pressed", !!s.voiceOn); }
+$("voiceBtn").addEventListener("click", () => {
+  s.voiceOn = !s.voiceOn; store.set(s); renderVoice();
+  if(s.voiceOn) speak({title:"이제 말로 읽어줄게"}); else if("speechSynthesis" in window) speechSynthesis.cancel();
+});
+$("alarm").addEventListener("close", () => { if("speechSynthesis" in window) speechSynthesis.cancel(); });
+renderVoice();
+let askRec = null;
+$("askMic").addEventListener("click", () => {
+  const R = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if(askRec){ try{ askRec.stop(); }catch{} return; }
+  if(!R) return renderAlarm({level:"warn", face:1, title:"여긴 말로 못 물어봐.", body:"이 브라우저는 음성 인식이 안 돼. 크롬이나 사파리에서 열거나, 그냥 쳐."});
+  askRec = new R(); askRec.lang = "ko-KR"; askRec.interimResults = true; askRec.maxAlternatives = 1;
+  const btn = $("askMic"); btn.classList.add("rec"); btn.setAttribute("aria-pressed", true);
+  $("askText").value = ""; $("askText").placeholder = "듣는 중… 말해";
+  askRec.onresult = e => { $("askText").value = [...e.results].map(r => r[0].transcript).join("").trim(); };
+  askRec.onerror = () => {};
+  askRec.onend = () => {
+    askRec = null; btn.classList.remove("rec"); btn.setAttribute("aria-pressed", false);
+    $("askText").placeholder = "쟈철한테 아무거나 물어봐 (🎤 누르고 말해도 돼)";
+    if($("askText").value.trim()){ askedByVoice = true; $("askForm").requestSubmit(); }
+  };
+  try{ askRec.start(); }catch{ askRec = null; btn.classList.remove("rec"); }
 });
 // 알림 ON/OFF: 켜져 있을 때 다시 누르면 끔
 // ON/OFF = 보채기 자체를 켜고 끔 (팝업·소리·브라우저 알림 전부)

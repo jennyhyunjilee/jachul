@@ -1,6 +1,13 @@
-"""(선택) 채팅에 Claude 연결. anthropic 패키지와 ANTHROPIC_API_KEY 가 있으면 켜지고, 없으면 화면이 내장 대답을 씀."""
+"""(선택) 채팅에 AI 연결. 아래 중 키가 있는 걸 씀 (둘 다 있으면 Claude 먼저):
+- Claude: anthropic 패키지 + ANTHROPIC_API_KEY (유료)
+- Gemini: GEMINI_API_KEY (Google AI Studio 무료 등급 키. 패키지 필요 없음)
+둘 다 없으면 화면이 내장 대답(패턴)을 씀. 키는 Render 환경변수에만 (깃·프론트 금지)."""
 import json
 import os
+import urllib.error
+import urllib.request
+
+GEMINI_MODEL = os.environ.get('GEMINI_MODEL', 'gemini-2.5-flash')
 
 CLAUDE_MODEL = os.environ.get('CLAUDE_MODEL', 'claude-opus-5-5')
 CHAT_SYSTEM = """너는 '쟈철'이라는 지하철 지각 방지 앱의 에이전트야. 사용자가 늦지 않게 보채는 게 일이야.
@@ -11,7 +18,7 @@ CHAT_SYSTEM = """너는 '쟈철'이라는 지하철 지각 방지 앱의 에이�
 - 형식: 첫 줄은 20자 이내 한 마디, 둘째 줄부터 설명. 마크다운 쓰지 마."""
 
 
-def ready():
+def claude_ready():
     try:
         import anthropic  # noqa: F401
     except ImportError:
@@ -19,7 +26,51 @@ def ready():
     return bool(os.environ.get('ANTHROPIC_API_KEY'))
 
 
+def gemini_ready():
+    return bool(os.environ.get('GEMINI_API_KEY'))
+
+
+def ready():
+    return claude_ready() or gemini_ready()
+
+
 def reply(question, context):
+    if claude_ready():
+        return claude_reply(question, context)
+    return gemini_reply(question, context)
+
+
+def split(text):
+    text = (text or '').strip()
+    if not text:
+        return {'ok': False, 'error': '빈 대답'}
+    title, _, body = text.partition('\n')
+    return {'ok': True, 'title': title.strip(), 'body': body.strip()}
+
+
+def gemini_reply(question, context):
+    body = {
+        'systemInstruction': {'parts': [{'text': CHAT_SYSTEM}]},
+        'contents': [{'role': 'user', 'parts': [{'text':
+                      f'[상황]\n{json.dumps(context, ensure_ascii=False)}\n\n[질문]\n{question}'}]}],
+        'generationConfig': {'maxOutputTokens': 400, 'temperature': 0.8, 'thinkingConfig': {'thinkingBudget': 0}},
+    }
+    req = urllib.request.Request(
+        f'https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_MODEL}:generateContent',
+        data=json.dumps(body).encode(), method='POST',
+        headers={'Content-Type': 'application/json', 'x-goog-api-key': os.environ['GEMINI_API_KEY']})
+    try:
+        with urllib.request.urlopen(req, timeout=20) as r:
+            data = json.loads(r.read().decode())
+    except urllib.error.HTTPError as e:
+        return {'ok': False, 'error': 'Gemini 호출이 너무 많아. 잠깐 뒤에 다시.' if e.code == 429 else f'Gemini 오류 {e.code}'}
+    except (urllib.error.URLError, TimeoutError):
+        return {'ok': False, 'error': 'Gemini 연결 실패'}
+    parts = ((data.get('candidates') or [{}])[0].get('content') or {}).get('parts') or []
+    return split(''.join(p.get('text', '') for p in parts))
+
+
+def claude_reply(question, context):
     import anthropic
     client = anthropic.Anthropic()
     try:
@@ -43,8 +94,4 @@ def reply(question, context):
         return {'ok': False, 'error': 'Claude 연결 실패'}
     if resp.stop_reason == 'refusal':
         return {'ok': False, 'error': 'Claude가 대답을 거절했어'}
-    text = ''.join(b.text for b in resp.content if b.type == 'text').strip()
-    if not text:
-        return {'ok': False, 'error': '빈 대답'}
-    title, _, body = text.partition('\n')
-    return {'ok': True, 'title': title.strip(), 'body': body.strip()}
+    return split(''.join(b.text for b in resp.content if b.type == 'text'))
